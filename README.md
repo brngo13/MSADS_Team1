@@ -80,8 +80,8 @@ The timeline above is adapted from our project’s general documentation and wil
 
 ## Team
 
-- **Members:** [placeholder] – list of team members and roles.
-- **Advisors:** [placeholder].
+- **Members:** Aneesha Dasari, Lauren Adolphe, Rinad Salkham, Brianna Ngo
+- **Advisors:** Nick Kadochnikov
 
 ## Acknowledgements
 
