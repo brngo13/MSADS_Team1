@@ -58,9 +58,9 @@ A detailed technical write-up and code will be provided in this repository. Wher
 
 | Week | Task | Status |
 | --- | --- | --- |
-| 1 | Data collection & preliminary exploration | Completed / [placeholder] |
-| 2 | Alignment of datasets to census tracts | Completed / [placeholder] |
-| 3 | Model baseline & discrepancy computation | In progress / [placeholder] |
+| 1 | Data collection & preliminary exploration | [placeholder] |
+| 2 | Alignment of datasets to census tracts | [placeholder] |
+| 3 | Model baseline & discrepancy computation | [placeholder] |
 | 4 | Multimodal fusion model development | [placeholder] |
 | 5 | Anomaly detection & environmental justice analysis | [placeholder] |
 | 6 | Visualization dashboard & user interface | [placeholder] |
