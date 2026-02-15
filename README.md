@@ -38,11 +38,11 @@ The workflow follows a structured pipeline:
 
 1. **Data Alignment:** Align NEI, Sentinel-5P, Sentinel-2, ADI, and ground sensor data to census-tract polygons.
 2. **Aggregation & Preprocessing:** Aggregate industrial facilities and emissions to tracts; compute tract-level satellite NO₂ averages; process land cover imagery; normalize and merge datasets.
-3. **Discrepancy Metric Calculation:** Model expected NO₂ levels based on self-reported emissions and baseline factors; compute residuals between modeled and observed NO₂ to identify anomalies.
+3. **Multimodal Model Training:** Train the fusion model on historical data to predict log(NO₂) from multi-modal inputs.
 4. **Anomaly Detection:** Apply unsupervised methods (e.g., isolation forest) and thresholding to classify tracts as normal or anomalous.
-5. **Multimodal Model Training:** Train the fusion model on historical data to predict log(NO₂) from multi-modal inputs.
+5. **Discrepancy Metric Calculation:** Model expected NO₂ levels based on self-reported emissions and baseline factors; compute residuals between modeled and observed NO₂ to identify anomalies.
 6. **Environmental Justice Assessment:** Compare anomaly scores with ADI and demographic metrics to assess disproportionate impacts.
-7. **Visualization & Reporting:** Generate maps, charts, and interactive dashboards summarizing findings; compile an EJ report and technical documentation.
+7. **Visualization & Reporting:** Generate maps, charts, and interactive dashboards summarizing findings; compile report and technical documentation.
 
 A detailed technical write-up and code will be provided in this repository. Where sections are not yet complete, we denote them as **[placeholder]**.
 
