@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEI Emissions Mapper</title>
+    <link href='https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css' rel='stylesheet' />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Archivo:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="map"></div>
+    
+    <div class="control-panel">
+        <div class="panel-header">
+            <div class="panel-title">NEI Emissions Mapper</div>
+            <div class="panel-subtitle">Select year and analyze emissions data</div>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="tab-nav">
+            <button class="tab-btn active" data-tab="emissions">Emissions</button>
+            <button class="tab-btn" data-tab="socioeconomic">Socioeconomic</button>
+        </div>
+
+        <!-- Emissions Tab Content -->
+        <div class="tab-content active" id="emissions-tab">
+        <div class="panel-section">
+            <div class="section-label">Select NEI Year</div>
+            <select id="year-selector" class="year-selector">
+                <option value="">Loading available years...</option>
+            </select>
+            <button id="load-year-btn" class="btn-primary" disabled>Load NEI Data</button>
+            <div id="year-info" style="margin-top: 12px; font-size: 11px; color: var(--text-secondary); display: none;">
+                <div id="file-size"></div>
+                <div id="row-count"></div>
+            </div>
+        </div>
+
+        <div class="panel-section">
+            <div class="section-label">Add New NEI Year</div>
+            <button id="upload-new-btn" class="btn-secondary">📤 Upload NEI Data</button>
+        </div>
+
+        <div class="panel-section">
+            <div class="section-label">Filters</div>
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">
+                    Minimum NOx Emissions (tons/year)
+                </label>
+                <input type="number" id="min-emissions" placeholder="0" min="0" step="10" value="0">
+            </div>
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">
+                    Site Type
+                </label>
+                <select id="site-type-filter" class="year-selector">
+                    <option value="">All Site Types</option>
+                </select>
+            </div>
+            <button id="apply-filters-btn" class="btn-primary">Apply Filters</button>
+        </div>
+
+        <div class="panel-section">
+            <div class="section-label">Current View</div>
+            <div style="font-size: 13px; color: var(--text-primary);">
+                <div style="margin-bottom: 8px;">
+                    <strong>Year:</strong> <span id="current-year">-</span>
+                </div>
+                <div style="margin-bottom: 8px;">
+                    <strong>Facilities:</strong> <span id="facility-count">0</span> / <span id="total-count">0</span>
+                </div>
+                <div>
+                    <strong>Pollutant:</strong> <span id="current-pollutant">NOX</span>
+                </div>
+            </div>
+        </div>
+        </div>
+        <!-- End Emissions Tab -->
+
+        <!-- Socioeconomic Tab Content -->
+        <div class="tab-content" id="socioeconomic-tab">
+            <div class="panel-section">
+                <div class="section-label">ADI Year</div>
+                <select id="adi-year-selector" class="year-selector">
+                    <option value="">Select year...</option>
+                    <option value="2023">2023</option>
+                    <option value="2020">2020</option>
+                    <option value="2015">2015</option>
+                </select>
+            </div>
+
+            <div class="panel-section">
+                <div class="section-label">ADI Score Type</div>
+                <select id="adi-score-type" class="year-selector">
+                    <option value="ADI_NATRANK">National Rank (1-100)</option>
+                    <option value="ADI_STATERNK">State Decile (1-10)</option>
+                </select>
+            </div>
+
+            <div class="panel-section">
+                <button id="load-adi-btn" class="btn-primary">Display ADI Layer</button>
+            </div>
+
+            <div class="panel-section">
+                <div class="section-label">Layer Controls</div>
+                <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; cursor: pointer;">
+                    <input type="checkbox" id="show-adi-layer" checked>
+                    <span style="font-size: 13px; color: var(--text-primary);">Show ADI Layer</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="show-emissions-overlay">
+                    <span style="font-size: 13px; color: var(--text-primary);">Overlay Emissions</span>
+                </label>
+            </div>
+
+            <div class="panel-section">
+                <div class="section-label">Info</div>
+                <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.6;">
+                    <p style="margin-bottom: 8px;">Zoom in to see ADI data (zoom level 9+)</p>
+                    <p style="margin-bottom: 8px;"><strong style="color: var(--text-primary);">Coverage:</strong> US-wide (all states)</p>
+                    <p><strong style="color: var(--text-primary);">Block Groups:</strong> <span id="adi-block-count">-</span></p>
+                </div>
+            </div>
+        </div>
+        <!-- End Socioeconomic Tab -->
+    </div>
+
+    <div class="legend" id="map-legend">
+        <div class="legend-title">Under-Reporting Status</div>
+        <div class="legend-item">
+            <div class="legend-circle green"></div>
+            <div class="legend-text">Within ±20%</div>
+        </div>
+        <div class="legend-item">
+            <div class="legend-circle amber"></div>
+            <div class="legend-text">±20-50% difference</div>
+        </div>
+        <div class="legend-item">
+            <div class="legend-circle red"></div>
+            <div class="legend-text">>50% discrepancy</div>
+        </div>
+        <div class="legend-item" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border);">
+            <div class="legend-circle" style="background: #808080;"></div>
+            <div class="legend-text">No measured data</div>
+        </div>
+        <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);">
+            <button id="theme-toggle" class="btn-secondary" style="width: 100%; font-size: 11px; padding: 8px;">
+                🌙 Light Mode
+            </button>
+        </div>
+    </div>
+
+    <div id="upload-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-title">Upload New NEI Data</div>
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">Year</label>
+                <input type="number" id="upload-year" placeholder="e.g., 2023" min="2000" max="2030">
+            </div>
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">NEI CSV File</label>
+                <input type="file" id="file-input" accept=".csv" style="display: none;">
+                <label for="file-input" class="upload-btn" style="cursor: pointer;">
+                    Choose File
+                </label>
+                <div id="file-name" style="margin-top: 8px; font-size: 12px; color: var(--text-secondary);"></div>
+            </div>
+            <button id="upload-submit" class="btn-primary">Validate & Upload</button>
+            <button id="upload-cancel" class="btn-secondary">Cancel</button>
+        </div>
+    </div>
+
+    <div id="site-details-modal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div class="modal-title">Facility Details</div>
+                <button id="site-details-close" style="background: none; border: none; color: var(--text-secondary);
+                        font-size: 24px; cursor: pointer; padding: 0; width: 30px; height: 30px;">&times;</button>
+            </div>
+            <div id="site-details-content" style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">
+                <!-- Content populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <script src='https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js'></script>
+    <script src="pmtiles-v3.js"></script>
+    <script src='https://unpkg.com/supercluster@8.0.1/dist/supercluster.min.js'></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

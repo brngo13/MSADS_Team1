@@ -1,0 +1,88 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Build outputs
+dist/
+build/
+out/
+
+# Environment variables
+.env
+.env.*
+config.json
+gee_creds.json
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ============================================================================
+# Data Files - Large files that should not be committed
+# ============================================================================
+
+# NEI Emissions Data (500MB+ files)
+data/nei/*.csv
+!data/nei/README.md
+!data/nei/.gitkeep
+
+# ADI Socioeconomic Data (10MB+ files)
+data/adi/*.csv
+!data/adi/README.md
+!data/adi/.gitkeep
+
+# Predictions Data
+data/predictions/*.csv
+!data/predictions/README.md
+!data/predictions/.gitkeep
+
+# Census Boundaries - GeoJSON files (large)
+data/boundaries/*.geojson
+data/boundaries/*.json
+
+# Census Boundaries - PMTiles files
+data/boundaries/*.pmtiles
+
+# Keep README and placeholder files
+!data/boundaries/README.md
+!data/boundaries/.gitkeep
+
+# Upload backups
+*.csv.backup
+
+# Build artifacts from PMTiles generation
+scripts/build_pmtiles/tiger_downloads/
+scripts/build_pmtiles/geojson_output/
+scripts/build_pmtiles/pmtiles_output/

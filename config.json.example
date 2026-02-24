@@ -1,0 +1,17 @@
+{
+  "googleMapsApiKey": "YOUR_GOOGLE_MAPS_API_KEY_HERE",
+  "geeProjectId": "msads-mba-autumn-2025-team-1",
+  "geeServiceAccountEmail": "882446104421-compute@developer.gserviceaccount.com",
+  "mapDefaults": {
+    "center": {
+      "lat": 39.8283,
+      "lng": -98.5795
+    },
+    "zoom": 5
+  },
+  "dataSource": {
+    "type": "api",
+    "apiEndpoint": "/api/predictions/2021",
+    "year": 2021
+  }
+}
