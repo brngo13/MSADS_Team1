@@ -3,191 +3,675 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NEI Emissions Mapper</title>
-    <link href='https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css' rel='stylesheet' />
+    <title>Facility Risk Mapper</title>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Archivo:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Map container */
+        #map {
+            height: 100vh;
+            width: 100%;
+        }
+
+        /* Ensure control panel appears above map */
+        .control-panel {
+            z-index: 1000;
+        }
+
+        .legend {
+            z-index: 1000;
+        }
+
+        /* Custom marker styles */
+        .custom-marker {
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .custom-marker:hover {
+            transform: scale(1.1);
+        }
+
+        /* Map provider toggle button */
+        #map-provider-toggle {
+            display: none;
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 2000;
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            transition: all 0.2s;
+            color: var(--text-primary);
+        }
+
+        #map-provider-toggle:hover {
+            background: var(--panel-bg-hover);
+            border-color: var(--primary);
+        }
+
+        #map-provider-toggle .provider-name {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        /* Emissions slider cursor */
+        #emissions-slider {
+            cursor: grab;
+        }
+
+        #emissions-slider:active {
+            cursor: grabbing;
+        }
+
+        /* Panel tabs */
+        .panel-tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .panel-tab {
+            flex: 1;
+            padding: 10px 20px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            background: rgba(128, 128, 128, 0.1);
+            border: 1px solid transparent;
+            border-bottom: none;
+            border-radius: 6px 6px 0 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            margin-bottom: -1px;
+            text-align: center;
+        }
+
+        .panel-tab:hover {
+            color: var(--text-primary);
+            background: rgba(128, 128, 128, 0.15);
+        }
+
+        .panel-tab.active {
+            color: #10b981;
+            background: var(--panel-bg);
+            border-color: var(--border);
+            border-bottom-color: var(--panel-bg);
+            font-weight: 600;
+        }
+
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        /* Info button */
+        .info-button {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #10b981;
+            border: 1px solid #10b981;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .info-button:hover {
+            background: #34d399;
+            border-color: #34d399;
+            color: white;
+        }
+
+        /* Info modal */
+        .info-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .info-modal.active {
+            display: flex;
+        }
+
+        .info-modal-content {
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 24px;
+            max-width: 700px;
+            margin: 20px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .info-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .info-modal-title {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--text-primary);
+        }
+
+        .info-modal-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 24px;
+            cursor: pointer;
+            width: 30px;
+            height: 30px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .info-modal-close:hover {
+            color: var(--text-primary);
+        }
+
+        .info-modal-body {
+            font-family: 'Archivo', sans-serif;
+            font-size: 13px;
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .info-modal-body h3 {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            font-weight: 500;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            margin-top: 24px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .info-modal-body h3::before {
+            content: '';
+            width: 3px;
+            height: 12px;
+            background: var(--accent-green);
+            border-radius: 2px;
+        }
+
+        .info-modal-body p {
+            margin-bottom: 12px;
+        }
+
+        .info-modal-body ul {
+            margin-left: 20px;
+            margin-bottom: 12px;
+        }
+
+        .info-modal-body a {
+            color: #10b981;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .info-modal-body a:hover {
+            text-decoration: underline;
+            color: #34d399;
+        }
+
+        /* Theme Toggle Switch */
+        .theme-toggle-container {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 8px;
+            gap: 12px;
+        }
+
+        .theme-mode-label {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .theme-switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 24px;
+        }
+
+        .theme-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        /* Dark theme (default) - dark background */
+        .theme-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #334155;
+            transition: 0.3s;
+            border-radius: 24px;
+            border: 1px solid #475569;
+        }
+
+        .theme-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 2.5px;
+            background-color: #e2e8f0;
+            transition: 0.3s;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        input:checked + .theme-slider:before {
+            transform: translateX(24px);
+        }
+
+        /* Light theme - light background */
+        body.light-theme .theme-slider {
+            background-color: #e2e8f0;
+            border-color: #cbd5e1;
+        }
+
+        body.light-theme .theme-slider:before {
+            background-color: #475569;
+        }
+    </style>
 </head>
 <body>
+    <!-- Map provider toggle button -->
+    <button id="map-provider-toggle">
+        <span class="provider-name" id="current-provider">Google Maps</span>
+    </button>
+
     <div id="map"></div>
-    
+
     <div class="control-panel">
         <div class="panel-header">
-            <div class="panel-title">NEI Emissions Mapper</div>
-            <div class="panel-subtitle">Select year and analyze emissions data</div>
+            <div class="panel-title">Facility NO₂ Emissions Map</div>
+            <button class="info-button" id="info-button" title="About this project">ℹ</button>
         </div>
 
-        <!-- Tab Navigation -->
-        <div class="tab-nav">
-            <button class="tab-btn active" data-tab="emissions">Emissions</button>
-            <button class="tab-btn" data-tab="socioeconomic">Socioeconomic</button>
+        <!-- Tab navigation -->
+        <div class="panel-tabs">
+            <button class="panel-tab active" data-tab="emissions">Facility Data</button>
+            <button class="panel-tab" data-tab="socioeconomic">Socioeconomic Data</button>
         </div>
 
-        <!-- Emissions Tab Content -->
-        <div class="tab-content active" id="emissions-tab">
-        <div class="panel-section">
-            <div class="section-label">Select NEI Year</div>
-            <select id="year-selector" class="year-selector">
-                <option value="">Loading available years...</option>
-            </select>
-            <button id="load-year-btn" class="btn-primary" disabled>Load NEI Data</button>
-            <div id="year-info" style="margin-top: 12px; font-size: 11px; color: var(--text-secondary); display: none;">
-                <div id="file-size"></div>
-                <div id="row-count"></div>
-            </div>
-        </div>
-
-        <div class="panel-section">
-            <div class="section-label">Add New NEI Year</div>
-            <button id="upload-new-btn" class="btn-secondary">📤 Upload NEI Data</button>
-        </div>
-
-        <div class="panel-section">
-            <div class="section-label">Filters</div>
-            <div style="margin-bottom: 16px;">
-                <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">
-                    Minimum NOx Emissions (tons/year)
-                </label>
-                <input type="number" id="min-emissions" placeholder="0" min="0" step="10" value="0">
-            </div>
-            <div style="margin-bottom: 16px;">
-                <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">
-                    Site Type
-                </label>
-                <select id="site-type-filter" class="year-selector">
-                    <option value="">All Site Types</option>
-                </select>
-            </div>
-            <button id="apply-filters-btn" class="btn-primary">Apply Filters</button>
-        </div>
-
-        <div class="panel-section">
-            <div class="section-label">Current View</div>
-            <div style="font-size: 13px; color: var(--text-primary);">
-                <div style="margin-bottom: 8px;">
-                    <strong>Year:</strong> <span id="current-year">-</span>
-                </div>
-                <div style="margin-bottom: 8px;">
-                    <strong>Facilities:</strong> <span id="facility-count">0</span> / <span id="total-count">0</span>
-                </div>
-                <div>
-                    <strong>Pollutant:</strong> <span id="current-pollutant">NOX</span>
-                </div>
-            </div>
-        </div>
-        </div>
-        <!-- End Emissions Tab -->
-
-        <!-- Socioeconomic Tab Content -->
-        <div class="tab-content" id="socioeconomic-tab">
+        <!-- NO2 Emissions tab -->
+        <div class="tab-panel active" id="emissions-tab">
             <div class="panel-section">
-                <div class="section-label">ADI Year</div>
-                <select id="adi-year-selector" class="year-selector">
-                    <option value="">Select year...</option>
-                    <option value="2023">2023</option>
-                    <option value="2020">2020</option>
-                    <option value="2015">2015</option>
+                <div class="section-label">Facility Data</div>
+                <div style="font-size: 13px; color: var(--text-primary);">
+                    <div style="margin-bottom: 8px;">
+                        <strong>Total Facilities:</strong> <span id="facility-count">0</span>
+                    </div>
+                    <div>
+                        <strong>Year:</strong> <span id="data-year">2021</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <div class="section-label">Risk Level Filter</div>
+                <select id="risk-filter" class="year-selector">
+                    <option value="">All Risk Levels</option>
+                    <option value="High">High Risk Only</option>
+                    <option value="Medium">Medium Risk Only</option>
+                    <option value="Low">Low Risk Only</option>
                 </select>
             </div>
 
             <div class="panel-section">
-                <div class="section-label">ADI Score Type</div>
-                <select id="adi-score-type" class="year-selector">
-                    <option value="ADI_NATRANK">National Rank (1-100)</option>
-                    <option value="ADI_STATERNK">State Decile (1-10)</option>
+                <div class="section-label">Industry Sector Filter</div>
+                <select id="sector-filter" class="year-selector">
+                    <option value="">All Sectors</option>
+                    <option value="Manufacturing">Manufacturing</option>
+                    <option value="Utilities">Utilities</option>
+                    <option value="Transportation & Warehousing">Transportation & Warehousing</option>
+                    <option value="Mining, Oil & Gas Extraction">Mining, Oil & Gas</option>
+                    <option value="Health Care">Health Care</option>
+                    <option value="Educational Services">Educational Services</option>
+                    <option value="Public Administration">Public Administration</option>
+                    <option value="Wholesale Trade">Wholesale Trade</option>
+                    <option value="Construction">Construction</option>
+                    <option value="Agriculture, Forestry, Fishing">Agriculture</option>
+                    <option value="Administrative & Support">Administrative & Support</option>
+                    <option value="Other">Other</option>
                 </select>
             </div>
 
             <div class="panel-section">
-                <button id="load-adi-btn" class="btn-primary">Display ADI Layer</button>
-            </div>
-
-            <div class="panel-section">
-                <div class="section-label">Layer Controls</div>
-                <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; cursor: pointer;">
-                    <input type="checkbox" id="show-adi-layer" checked>
-                    <span style="font-size: 13px; color: var(--text-primary);">Show ADI Layer</span>
-                </label>
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                    <input type="checkbox" id="show-emissions-overlay">
-                    <span style="font-size: 13px; color: var(--text-primary);">Overlay Emissions</span>
-                </label>
+                <div class="section-label">Total Emissions Filter</div>
+                <div style="position: relative; margin-top: 24px;">
+                    <div id="emissions-value-container" style="position: absolute; top: -20px; left: 0; font-size: 12px; color: var(--text-primary); font-weight: 500; white-space: nowrap; transition: left 0.1s ease;">
+                        > <span id="emissions-value">1</span> tons/year
+                    </div>
+                    <input
+                        type="range"
+                        id="emissions-slider"
+                        min="0"
+                        max="13"
+                        step="1"
+                        value="1"
+                        style="width: 100%; margin-bottom: 12px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-secondary);">
+                        <span>None</span>
+                        <span>10k tons</span>
+                    </div>
+                </div>
             </div>
 
             <div class="panel-section">
                 <div class="section-label">Info</div>
                 <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.6;">
-                    <p style="margin-bottom: 8px;">Zoom in to see ADI data (zoom level 9+)</p>
-                    <p style="margin-bottom: 8px;"><strong style="color: var(--text-primary);">Coverage:</strong> US-wide (all states)</p>
-                    <p><strong style="color: var(--text-primary);">Block Groups:</strong> <span id="adi-block-count">-</span></p>
+                    <p style="margin-bottom: 8px;">Click markers to view facility details including:</p>
+                    <ul style="margin-left: 16px; margin-top: 8px;">
+                        <li>Site name and facility ID</li>
+                        <li>Total emissions (tons/year)</li>
+                        <li>NAICS code and description</li>
+                    </ul>
                 </div>
             </div>
         </div>
-        <!-- End Socioeconomic Tab -->
+
+        <!-- Socioeconomic Data tab -->
+        <div class="tab-panel" id="socioeconomic-tab">
+            <div class="panel-section">
+                <div class="section-label">ADI Data Controls</div>
+
+                <!-- Year Selection -->
+                <div style="margin-bottom: 12px;">
+                    <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Year</label>
+                    <select id="social-year-selector" class="year-selector">
+                        <option value="">Select Year</option>
+                        <option value="2015">2015</option>
+                        <option value="2016" disabled>2016</option>
+                        <option value="2017" disabled>2017</option>
+                        <option value="2018" disabled>2018</option>
+                        <option value="2019" disabled>2019</option>
+                        <option value="2020">2020</option>
+                        <option value="2021" disabled>2021</option>
+                        <option value="2022" disabled>2022</option>
+                        <option value="2023">2023</option>
+                        <option value="2024" disabled>2024</option>
+                        <option value="2025" disabled>2025</option>
+                    </select>
+                </div>
+
+                <!-- Indicator Selection -->
+                <div style="margin-bottom: 12px;">
+                    <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Socioeconomic Indicator</label>
+                    <select id="social-indicator-selector" class="year-selector">
+                        <option value="">Select Indicator</option>
+                        <option value="adi">Area Deprivation Index (ADI)</option>
+                    </select>
+                </div>
+
+                <!-- ADI Rank Type Selection -->
+                <div id="adi-rank-type-section" style="margin-bottom: 12px; display: none;">
+                    <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">ADI Rank Type</label>
+                    <select id="adi-rank-type-selector" class="year-selector">
+                        <option value="national">National Rank (1-100)</option>
+                        <option value="state">State Rank (1-10)</option>
+                    </select>
+                </div>
+
+                <!-- Load Button -->
+                <button id="load-social-data" class="btn-primary">Display Social Data</button>
+
+                <!-- Status -->
+                <div id="social-data-status" style="margin-top: 12px; font-size: 11px; color: var(--text-secondary); line-height: 1.6;">
+                    <p>Select year and indicator to display choropleth</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Info Modal -->
+    <div class="info-modal" id="info-modal">
+        <div class="info-modal-content">
+            <div class="info-modal-header">
+                <div class="info-modal-title">About This Project</div>
+                <button class="info-modal-close" id="info-modal-close">&times;</button>
+            </div>
+            <div class="info-modal-body">
+                <h3>Project Overview</h3>
+                <p>A University of Chicago Masters of Applied Data Science capstone project in collaboration with <a href="https://commons.cri.uchicago.edu/" target="_blank" rel="noopener noreferrer">Data for Common Good</a>, focusing on two key objectives:</p>
+                <ul>
+                    <li><strong>Nitrogen Dioxide Emissions Verification:</strong> Using satellite imaging from <a href="https://dataspace.copernicus.eu/data-collections/copernicus-sentinel-missions" target="_blank" rel="noopener noreferrer">Sentinel-2 and Sentinel-5P satellites</a> to measure NO₂ emissions and compare with historical <a href="https://www.epa.gov/air-emissions-inventories/get-air-emissions-data-0" target="_blank" rel="noopener noreferrer">EPA National Emissions Inventory (NEI)</a> reportings to identify facilities at high risk for underreporting.</li>
+                    <li><strong>Environmental Justice Analysis:</strong> Overlay emissions data with socioeconomic metrics to assess potential health risks in disadvantaged communities.</li>
+                </ul>
+
+                <h3>Methodology</h3>
+                <ul>
+                    <li>Satellite-based NO₂ measurements from Copernicus Sentinel missions</li>
+                    <li>Comparison with facility-reported emissions to EPA NEI</li>
+                    <li>Machine learning models to predict underreporting risk</li>
+                    <li>Integration with Area Deprivation Index (ADI) socioeconomic data</li>
+                    <li>Interactive visualization of facilities and census-level indicators</li>
+                </ul>
+
+                <h3>Scope</h3>
+                <p>This implementation focuses on <strong>Illinois facilities</strong>, but the analytical pipeline is designed to be generalizable to other states and regions.</p>
+
+                <p style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border);">
+                    <a href="https://github.com/brngo13/MSADS_Team1" target="_blank" rel="noopener noreferrer" style="font-weight: 600;">
+                        View Project on GitHub →
+                    </a>
+                </p>
+            </div>
+        </div>
     </div>
 
     <div class="legend" id="map-legend">
-        <div class="legend-title">Under-Reporting Status</div>
-        <div class="legend-item">
-            <div class="legend-circle green"></div>
-            <div class="legend-text">Within ±20%</div>
+        <!-- ADI Legend (hidden by default, shown on top when active) -->
+        <div id="adi-legend" style="display: none; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border);">
+            <div class="legend-title">Area Deprivation Index</div>
+            <div class="legend-item">
+                <div style="width: 16px; height: 16px; background: #e5e7eb; border-radius: 2px;"></div>
+                <div class="legend-text">Low Disadvantage (1-20)</div>
+            </div>
+            <div class="legend-item">
+                <div style="width: 16px; height: 16px; background: #cbd5e1; border-radius: 2px;"></div>
+                <div class="legend-text">Below Average (21-40)</div>
+            </div>
+            <div class="legend-item">
+                <div style="width: 16px; height: 16px; background: #94a3b8; border-radius: 2px;"></div>
+                <div class="legend-text">Average (41-60)</div>
+            </div>
+            <div class="legend-item">
+                <div style="width: 16px; height: 16px; background: #64748b; border-radius: 2px;"></div>
+                <div class="legend-text">Above Average (61-80)</div>
+            </div>
+            <div class="legend-item">
+                <div style="width: 16px; height: 16px; background: #475569; border-radius: 2px;"></div>
+                <div class="legend-text">High Disadvantage (81-100)</div>
+            </div>
         </div>
-        <div class="legend-item">
-            <div class="legend-circle amber"></div>
-            <div class="legend-text">±20-50% difference</div>
+
+        <!-- Facility Risk Legend (always visible below ADI when both shown) -->
+        <div id="facility-legend">
+            <div class="legend-title">Facilities Legend</div>
+            <div class="legend-text" style="font-size: 11px; color: var(--text-secondary); margin-bottom: 8px;">
+                Circle color indicates identified risk of underreporting
+            </div>
+            <div class="legend-item">
+                <div class="legend-circle" style="background: #ef4444;"></div>
+                <div class="legend-text">High Risk</div>
+            </div>
+            <div class="legend-item">
+                <div class="legend-circle amber"></div>
+                <div class="legend-text">Medium Risk</div>
+            </div>
+            <div class="legend-item">
+                <div class="legend-circle green"></div>
+                <div class="legend-text">Low Risk</div>
+            </div>
+            <div class="legend-text" style="font-size: 11px; color: var(--text-secondary); margin-top: 8px;">
+                Circle size is relative to total emissions
+            </div>
         </div>
-        <div class="legend-item">
-            <div class="legend-circle red"></div>
-            <div class="legend-text">>50% discrepancy</div>
-        </div>
-        <div class="legend-item" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border);">
-            <div class="legend-circle" style="background: #808080;"></div>
-            <div class="legend-text">No measured data</div>
-        </div>
+
         <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);">
-            <button id="theme-toggle" class="btn-secondary" style="width: 100%; font-size: 11px; padding: 8px;">
-                🌙 Light Mode
-            </button>
-        </div>
-    </div>
-
-    <div id="upload-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-title">Upload New NEI Data</div>
-            <div style="margin-bottom: 16px;">
-                <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">Year</label>
-                <input type="number" id="upload-year" placeholder="e.g., 2023" min="2000" max="2030">
-            </div>
-            <div style="margin-bottom: 16px;">
-                <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">NEI CSV File</label>
-                <input type="file" id="file-input" accept=".csv" style="display: none;">
-                <label for="file-input" class="upload-btn" style="cursor: pointer;">
-                    Choose File
+            <div class="theme-toggle-container">
+                <label class="theme-switch">
+                    <input type="checkbox" id="theme-toggle" checked>
+                    <span class="theme-slider"></span>
                 </label>
-                <div id="file-name" style="margin-top: 8px; font-size: 12px; color: var(--text-secondary);"></div>
+                <span id="theme-label" class="theme-mode-label">Dark Mode</span>
             </div>
-            <button id="upload-submit" class="btn-primary">Validate & Upload</button>
-            <button id="upload-cancel" class="btn-secondary">Cancel</button>
         </div>
     </div>
 
-    <div id="site-details-modal" class="modal">
-        <div class="modal-content" style="max-width: 600px;">
+    <!-- Facility Details Modal -->
+    <div id="facility-modal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <div class="modal-title">Facility Details</div>
-                <button id="site-details-close" style="background: none; border: none; color: var(--text-secondary);
+                <button id="facility-modal-close" style="background: none; border: none; color: var(--text-secondary);
                         font-size: 24px; cursor: pointer; padding: 0; width: 30px; height: 30px;">&times;</button>
             </div>
-            <div id="site-details-content" style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">
+            <div id="facility-details-content" style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">
                 <!-- Content populated by JavaScript -->
             </div>
         </div>
     </div>
 
-    <script src='https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js'></script>
-    <script src="pmtiles-v3.js"></script>
-    <script src='https://unpkg.com/supercluster@8.0.1/dist/supercluster.min.js'></script>
+    <!-- Load PapaParse for CSV parsing (required by both providers) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-    <script src="app.js"></script>
+
+    <!-- Load common utilities (shared between both map providers) -->
+    <script src="app_common.js"></script>
+
+    <!-- Dynamic map provider loader -->
+    <script>
+        // Check localStorage for preferred provider, default to Google Maps
+        let currentProvider = localStorage.getItem('mapProvider') || 'google';
+
+        // Update toggle button text
+        document.getElementById('current-provider').textContent =
+            currentProvider === 'google' ? 'Google Maps' : 'MapLibre';
+
+        // Toggle button click handler
+        document.getElementById('map-provider-toggle').addEventListener('click', () => {
+            const newProvider = currentProvider === 'google' ? 'maplibre' : 'google';
+            localStorage.setItem('mapProvider', newProvider);
+            location.reload();
+        });
+
+        // Load appropriate map library and app file
+        if (currentProvider === 'google') {
+            // Load Google Maps
+            console.log('Loading Google Maps...');
+
+            // Load MarkerClusterer first
+            const clustererScript = document.createElement('script');
+            clustererScript.src = 'https://unpkg.com/@googlemaps/markerclusterer/dist/index.min.js';
+            clustererScript.onload = () => {
+                console.log('✓ MarkerClusterer loaded');
+
+                // Load app_gmaps.js after MarkerClusterer
+                const appScript = document.createElement('script');
+                appScript.src = 'app_gmaps.js';
+                appScript.onload = () => {
+                    console.log('✓ app_gmaps.js loaded');
+
+                    // Fetch config and load Google Maps API last
+                    fetch('/api/config')
+                        .then(response => response.json())
+                        .then(config => {
+                            window.APP_CONFIG = config;
+
+                            const script = document.createElement('script');
+                            script.src = `https://maps.googleapis.com/maps/api/js?key=${config.googleMapsApiKey}&loading=async&callback=initMap`;
+                            script.async = true;
+                            script.defer = true;
+                            document.head.appendChild(script);
+                        })
+                        .catch(error => {
+                            console.error('Failed to load configuration:', error);
+                            alert('Failed to load app configuration. Please ensure config.json exists.');
+                        });
+                };
+                document.body.appendChild(appScript);
+            };
+            document.head.appendChild(clustererScript);
+
+        } else {
+            // Load MapLibre
+            console.log('Loading MapLibre...');
+
+            // Load MapLibre GL CSS
+            const maplibreCss = document.createElement('link');
+            maplibreCss.rel = 'stylesheet';
+            maplibreCss.href = 'https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css';
+            document.head.appendChild(maplibreCss);
+
+            // Load MapLibre GL JS
+            const maplibreScript = document.createElement('script');
+            maplibreScript.src = 'https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js';
+            maplibreScript.onload = () => {
+                // Load Supercluster for marker clustering
+                const superclusterScript = document.createElement('script');
+                superclusterScript.src = 'https://unpkg.com/supercluster@7.1.5/dist/supercluster.min.js';
+                superclusterScript.onload = () => {
+                    // Load app_maplibre.js after dependencies are loaded
+                    const appScript = document.createElement('script');
+                    appScript.src = 'app_maplibre.js';
+                    document.body.appendChild(appScript);
+                };
+                document.head.appendChild(superclusterScript);
+            };
+            document.head.appendChild(maplibreScript);
+        }
+    </script>
 </body>
 </html>

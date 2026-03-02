@@ -4,6 +4,7 @@ const csv = require('csv-parser');
 const fs = require('fs');
 const path = require('path');
 const { createReadStream } = require('fs');
+const dataFetcher = require('./dataFetcher');
 
 const app = express();
 const PORT = 3000;
@@ -317,63 +318,67 @@ app.get('/api/config', (req, res) => {
 // Predictions API - Serve facility predictions data
 // ============================================================================
 
-app.get('/api/predictions/:year', (req, res) => {
+app.get('/api/predictions/:year', async (req, res) => {
     const year = req.params.year;
-    const filePath = path.join(__dirname, `../data/predictions/Data_Predictions_annual_risk_with_socioeconomic_${year}.csv`);
 
-    if (!fs.existsSync(filePath)) {
+    try {
+        // Fetch from GCS with local caching
+        const filePath = await dataFetcher.getPredictionsData(year);
+
+        res.setHeader('Content-Type', 'text/csv');
+        const readStream = fs.createReadStream(filePath);
+        readStream.pipe(res);
+    } catch (error) {
+        console.error(`Error fetching predictions data for ${year}:`, error);
         return res.status(404).json({
             error: 'Predictions data not found',
-            message: `No predictions data available for year ${year}`
+            message: `No predictions data available for year ${year}. ${error.message}`
         });
     }
-
-    res.setHeader('Content-Type', 'text/csv');
-    const readStream = fs.createReadStream(filePath);
-    readStream.pipe(res);
 });
 
 // ============================================================================
 // ADI API - Serve Area Deprivation Index data by year
 // ============================================================================
 
-app.get('/api/adi/:year', (req, res) => {
+app.get('/api/adi/:year', async (req, res) => {
     const year = req.params.year;
-    const filePath = path.join(__dirname, `../data/adi/ADI_${year}.csv`);
 
-    if (!fs.existsSync(filePath)) {
+    try {
+        // Fetch from GCS with local caching
+        const filePath = await dataFetcher.getAdiData(year);
+
+        res.setHeader('Content-Type', 'text/csv');
+        const readStream = fs.createReadStream(filePath);
+        readStream.pipe(res);
+    } catch (error) {
+        console.error(`Error fetching ADI data for ${year}:`, error);
         return res.status(404).json({
             error: 'ADI data not found',
-            message: `No ADI data available for year ${year}`
+            message: `No ADI data available for year ${year}. ${error.message}`
         });
     }
-
-    res.setHeader('Content-Type', 'text/csv');
-    const readStream = fs.createReadStream(filePath);
-    readStream.pipe(res);
 });
 
 // ============================================================================
 // Boundaries API - Serve census block groups GeoJSON
 // ============================================================================
 
-app.get('/api/boundaries/block_groups', (req, res) => {
-    // Try Illinois-specific file first, then fall back to US-wide
-    const ilFilePath = path.join(__dirname, '../data/boundaries/IL_block_groups.geojson');
-    const usFilePath = path.join(__dirname, '../data/boundaries/us_block_groups.geojson');
+app.get('/api/boundaries/block_groups', async (req, res) => {
+    try {
+        // Fetch from GCS with local caching
+        const filePath = await dataFetcher.getBoundaryData('block_groups');
 
-    const filePath = fs.existsSync(ilFilePath) ? ilFilePath : usFilePath;
-
-    if (!fs.existsSync(filePath)) {
+        res.setHeader('Content-Type', 'application/json');
+        const readStream = fs.createReadStream(filePath);
+        readStream.pipe(res);
+    } catch (error) {
+        console.error('Error fetching block groups data:', error);
         return res.status(404).json({
             error: 'Block groups data not found',
-            message: 'Download IL block groups: https://www2.census.gov/geo/tiger/TIGER2010/BG/2010/tl_2010_17_bg10.zip and convert to GeoJSON'
+            message: `Failed to load block groups boundary data. ${error.message}`
         });
     }
-
-    res.setHeader('Content-Type', 'application/json');
-    const readStream = fs.createReadStream(filePath);
-    readStream.pipe(res);
 });
 
 // ============================================================================

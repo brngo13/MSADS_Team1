@@ -2,6 +2,8 @@
   "googleMapsApiKey": "YOUR_GOOGLE_MAPS_API_KEY_HERE",
   "geeProjectId": "msads-mba-autumn-2025-team-1",
   "geeServiceAccountEmail": "882446104421-compute@developer.gserviceaccount.com",
+  "gcsStorageBucket": "msads-team1-data",
+  "gcsCredentialsPath": "./gcs_credentials.json",
   "mapDefaults": {
     "center": {
       "lat": 39.8283,

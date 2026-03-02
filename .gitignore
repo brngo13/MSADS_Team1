@@ -27,6 +27,7 @@ out/
 .env.*
 config.json
 gee_creds.json
+gcs_credentials.json
 
 # Temporary files
 tmp/
@@ -52,6 +53,9 @@ Thumbs.db
 # ============================================================================
 # Data Files - Large files that should not be committed
 # ============================================================================
+
+# Google Cloud Storage local cache (fetched files)
+data_cache/
 
 # NEI Emissions Data (500MB+ files)
 data/nei/*.csv

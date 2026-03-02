@@ -32,6 +32,10 @@ body.light-theme {
     --popup-text: #2c3e50;
 }
 
+body.light-theme .panel-header {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(255, 255, 255, 0.95));
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -88,6 +92,9 @@ body {
     padding: 24px;
     background: linear-gradient(135deg, rgba(0, 255, 136, 0.1), rgba(10, 14, 39, 0.5));
     border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .panel-title {
@@ -96,7 +103,7 @@ body {
     font-weight: 600;
     letter-spacing: 2px;
     text-transform: uppercase;
-    color: var(--accent-green);
+    color: var(--text-primary);
     margin-bottom: 4px;
 }
 
