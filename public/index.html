@@ -323,9 +323,194 @@
         body.light-theme .theme-slider:before {
             background-color: #475569;
         }
+
+        /* Census popup dark mode styling (MapLibre) */
+        .census-popup-dark .maplibregl-popup-content {
+            background-color: #1f2937 !important;
+            color: #e5e7eb !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+        }
+
+        .census-popup-dark .maplibregl-popup-tip {
+            border-top-color: #1f2937 !important;
+            border-bottom-color: #1f2937 !important;
+            border-left-color: #1f2937 !important;
+            border-right-color: #1f2937 !important;
+        }
+
+        .census-popup-light .maplibregl-popup-content {
+            background-color: #ffffff !important;
+            color: #1f2937 !important;
+        }
+
+        /* Hide default MapLibre close button for census popups (using custom inline button) */
+        .census-popup-dark .maplibregl-popup-close-button,
+        .census-popup-light .maplibregl-popup-close-button {
+            display: none !important;
+        }
+
+        /* Google Maps InfoWindow styling - Light Mode (default) */
+        body.light-theme .gm-style .gm-style-iw-c {
+            background-color: #ffffff !important;
+            padding: 0 !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+        }
+
+        body.light-theme .gm-style .gm-style-iw-d {
+            background-color: #ffffff !important;
+            overflow: hidden !important;
+        }
+
+        body.light-theme .gm-style .gm-style-iw-chr {
+            background-color: #ffffff !important;
+        }
+
+        /* Google Maps InfoWindow styling - Dark Mode */
+        body.dark-theme .gm-style .gm-style-iw-c {
+            background-color: #1f2937 !important;
+            padding: 0 !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+        }
+
+        body.dark-theme .gm-style .gm-style-iw-d {
+            background-color: #1f2937 !important;
+            overflow: hidden !important;
+        }
+
+        body.dark-theme .gm-style .gm-style-iw-chr {
+            background-color: #1f2937 !important;
+        }
+
+        /* Hide default Google Maps close button (using custom inline button) */
+        .gm-style .gm-style-iw-chr {
+            display: none !important;
+        }
+
+        /* Facility search autocomplete */
+        .autocomplete-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            border-top: none;
+            border-radius: 0 0 10px 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+
+        .autocomplete-dropdown.active {
+            display: block;
+        }
+
+        .autocomplete-item {
+            padding: 10px 12px;
+            cursor: pointer;
+            font-size: 12px;
+            border-bottom: 1px solid rgba(128, 128, 128, 0.1);
+            transition: background 0.15s;
+        }
+
+        .autocomplete-item:last-child {
+            border-bottom: none;
+        }
+
+        .autocomplete-item:hover {
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .autocomplete-item-name {
+            color: var(--text-primary);
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .autocomplete-item-details {
+            color: var(--text-secondary);
+            font-size: 10px;
+        }
+
+        /* Mobile toggle buttons - hidden on desktop */
+        .mobile-toggle-btn {
+            display: none;
+            position: fixed;
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 2000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transition: all 0.2s;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .mobile-toggle-btn:hover {
+            background: var(--panel-bg-hover);
+            border-color: var(--primary);
+        }
+
+        #menu-toggle {
+            top: 20px;
+            left: 20px;
+        }
+
+        #legend-toggle {
+            top: 80px;
+            right: 20px;
+        }
+
+        /* Mobile styles */
+        @media (max-width: 768px) {
+            /* Show mobile toggle buttons */
+            .mobile-toggle-btn {
+                display: flex;
+            }
+
+            /* Control panel - hidden by default on mobile, slides in when active */
+            .control-panel {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+
+            .control-panel.mobile-visible {
+                transform: translateX(0);
+            }
+
+            /* Legend - hidden by default on mobile */
+            .legend {
+                transform: translateX(150%);
+                transition: transform 0.3s ease;
+            }
+
+            .legend.mobile-visible {
+                transform: translateX(0);
+            }
+
+            /* Map provider toggle - adjust position on mobile */
+            #map-provider-toggle {
+                top: 80px;
+                left: 20px;
+            }
+        }
     </style>
 </head>
 <body>
+    <!-- Mobile toggle buttons -->
+    <button id="menu-toggle" class="mobile-toggle-btn" title="Toggle menu">
+        <span class="hamburger-icon">☰</span>
+    </button>
+    <button id="legend-toggle" class="mobile-toggle-btn legend-toggle-btn" title="Toggle legend">
+        <span class="legend-icon">◐</span>
+    </button>
+
     <!-- Map provider toggle button -->
     <button id="map-provider-toggle">
         <span class="provider-name" id="current-provider">Google Maps</span>
@@ -356,6 +541,20 @@
                     <div>
                         <strong>Year:</strong> <span id="data-year">2021</span>
                     </div>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <div class="section-label">Search Facilities</div>
+                <div style="position: relative;">
+                    <input
+                        type="text"
+                        id="facility-search"
+                        class="year-selector"
+                        placeholder="Type facility name..."
+                        autocomplete="off"
+                    >
+                    <div id="facility-suggestions" class="autocomplete-dropdown"></div>
                 </div>
             </div>
 
@@ -431,18 +630,9 @@
                 <div style="margin-bottom: 12px;">
                     <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Year</label>
                     <select id="social-year-selector" class="year-selector">
-                        <option value="">Select Year</option>
                         <option value="2015">2015</option>
-                        <option value="2016" disabled>2016</option>
-                        <option value="2017" disabled>2017</option>
-                        <option value="2018" disabled>2018</option>
-                        <option value="2019" disabled>2019</option>
-                        <option value="2020">2020</option>
-                        <option value="2021" disabled>2021</option>
-                        <option value="2022" disabled>2022</option>
+                        <option value="2020" selected>2020</option>
                         <option value="2023">2023</option>
-                        <option value="2024" disabled>2024</option>
-                        <option value="2025" disabled>2025</option>
                     </select>
                 </div>
 
@@ -464,8 +654,8 @@
                     </select>
                 </div>
 
-                <!-- Load Button -->
-                <button id="load-social-data" class="btn-primary">Display Social Data</button>
+                <!-- Toggle Census Data Button -->
+                <button id="toggle-census-data" class="btn-primary">Load Census Data</button>
 
                 <!-- Status -->
                 <div id="social-data-status" style="margin-top: 12px; font-size: 11px; color: var(--text-secondary); line-height: 1.6;">
@@ -539,9 +729,9 @@
 
         <!-- Facility Risk Legend (always visible below ADI when both shown) -->
         <div id="facility-legend">
-            <div class="legend-title">Facilities Legend</div>
-            <div class="legend-text" style="font-size: 11px; color: var(--text-secondary); margin-bottom: 8px;">
-                Circle color indicates identified risk of underreporting
+            <div class="legend-title">Emitting Facilities</div>
+            <div class="legend-text" style="font-size: 11px; color: var(--text-secondary); margin-bottom: 8px; line-height: 1.5;">
+                Facility risk represents the predicted probability of underreporting emissions. Circle color indicates risk level:
             </div>
             <div class="legend-item">
                 <div class="legend-circle" style="background: #ef4444;"></div>
@@ -616,13 +806,13 @@
             const clustererScript = document.createElement('script');
             clustererScript.src = 'https://unpkg.com/@googlemaps/markerclusterer/dist/index.min.js';
             clustererScript.onload = () => {
-                console.log('✓ MarkerClusterer loaded');
+                console.log('MarkerClusterer loaded');
 
                 // Load app_gmaps.js after MarkerClusterer
                 const appScript = document.createElement('script');
                 appScript.src = 'app_gmaps.js';
                 appScript.onload = () => {
-                    console.log('✓ app_gmaps.js loaded');
+                    console.log('app_gmaps.js loaded');
 
                     // Fetch config and load Google Maps API last
                     fetch('/api/config')

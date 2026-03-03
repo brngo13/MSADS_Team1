@@ -40,6 +40,38 @@ const NAICS_SECTORS = {
     '92': 'Public Administration'
 };
 
+// County FIPS to name mapping (state FIPS + county FIPS -> county name)
+// Format: 'SSCCC' where SS = state FIPS, CCC = county FIPS
+const COUNTY_NAMES = {
+    // Illinois (17) - All 102 counties
+    '17001': 'Adams', '17003': 'Alexander', '17005': 'Bond', '17007': 'Boone',
+    '17009': 'Brown', '17011': 'Bureau', '17013': 'Calhoun', '17015': 'Carroll',
+    '17017': 'Cass', '17019': 'Champaign', '17021': 'Christian', '17023': 'Clark',
+    '17025': 'Clay', '17027': 'Clinton', '17029': 'Coles', '17031': 'Cook',
+    '17033': 'Crawford', '17035': 'Cumberland', '17037': 'DeKalb', '17039': 'De Witt',
+    '17041': 'Douglas', '17043': 'DuPage', '17045': 'Edgar', '17047': 'Edwards',
+    '17049': 'Effingham', '17051': 'Fayette', '17053': 'Ford', '17055': 'Franklin',
+    '17057': 'Fulton', '17059': 'Gallatin', '17061': 'Greene', '17063': 'Grundy',
+    '17065': 'Hamilton', '17067': 'Hancock', '17069': 'Hardin', '17071': 'Henderson',
+    '17073': 'Henry', '17075': 'Iroquois', '17077': 'Jackson', '17079': 'Jasper',
+    '17081': 'Jefferson', '17083': 'Jersey', '17085': 'Jo Daviess', '17087': 'Johnson',
+    '17089': 'Kane', '17091': 'Kankakee', '17093': 'Kendall', '17095': 'Knox',
+    '17097': 'Lake', '17099': 'LaSalle', '17101': 'Lawrence', '17103': 'Lee',
+    '17105': 'Livingston', '17107': 'Logan', '17109': 'McDonough', '17111': 'McHenry',
+    '17113': 'McLean', '17115': 'Macon', '17117': 'Macoupin', '17119': 'Madison',
+    '17121': 'Marion', '17123': 'Marshall', '17125': 'Mason', '17127': 'Massac',
+    '17129': 'Menard', '17131': 'Mercer', '17133': 'Monroe', '17135': 'Montgomery',
+    '17137': 'Morgan', '17139': 'Moultrie', '17141': 'Ogle', '17143': 'Peoria',
+    '17145': 'Perry', '17147': 'Piatt', '17149': 'Pike', '17151': 'Pope',
+    '17153': 'Pulaski', '17155': 'Putnam', '17157': 'Randolph', '17159': 'Richland',
+    '17161': 'Rock Island', '17163': 'St. Clair', '17165': 'Saline', '17167': 'Sangamon',
+    '17169': 'Schuyler', '17171': 'Scott', '17173': 'Shelby', '17175': 'Stark',
+    '17177': 'Stephenson', '17179': 'Tazewell', '17181': 'Union', '17183': 'Vermilion',
+    '17185': 'Wabash', '17187': 'Warren', '17189': 'Washington', '17191': 'Wayne',
+    '17193': 'White', '17195': 'Whiteside', '17197': 'Will', '17199': 'Williamson',
+    '17201': 'Winnebago', '17203': 'Woodford'
+};
+
 // Get sector from NAICS code
 function getNaicsSector(naicsCode) {
     if (!naicsCode) return 'Unknown';
@@ -299,7 +331,7 @@ function getCircleRadius(emissions) {
  */
 function showToast(message, type = 'info') {
     // Simple console log for now - can be enhanced with actual toast UI
-    const prefix = type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️';
+    const prefix = type === 'error' ? '[ERROR]' : type === 'success' ? '[SUCCESS]' : '[INFO]';
     console.log(`${prefix} ${message}`);
 
     // You can add actual toast UI here if desired
@@ -433,6 +465,142 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Mobile toggle buttons
+    const menuToggle = document.getElementById('menu-toggle');
+    const legendToggle = document.getElementById('legend-toggle');
+    const controlPanel = document.querySelector('.control-panel');
+    const legend = document.querySelector('.legend');
+
+    // On load: show control panel, hide legend on mobile
+    if (window.innerWidth <= 768) {
+        controlPanel.classList.add('mobile-visible');
+        legend.classList.remove('mobile-visible');
+    }
+
+    // Toggle control panel (menu)
+    if (menuToggle) {
+        menuToggle.addEventListener('click', () => {
+            const isVisible = controlPanel.classList.toggle('mobile-visible');
+
+            // Update button icon based on state
+            const icon = menuToggle.querySelector('.hamburger-icon');
+            if (icon) {
+                icon.textContent = isVisible ? '<' : '☰';
+            }
+
+            // On mobile, hide legend when menu opens
+            if (window.innerWidth <= 768 && isVisible) {
+                legend.classList.remove('mobile-visible');
+                // Reset legend button icon
+                const legendIcon = legendToggle.querySelector('.legend-icon');
+                if (legendIcon) legendIcon.textContent = '◐';
+            }
+        });
+    }
+
+    // Toggle legend
+    if (legendToggle) {
+        legendToggle.addEventListener('click', () => {
+            const isVisible = legend.classList.toggle('mobile-visible');
+
+            // Update button icon based on state
+            const icon = legendToggle.querySelector('.legend-icon');
+            if (icon) {
+                icon.textContent = isVisible ? '>' : '◐';
+            }
+
+            // On mobile, hide control panel when legend opens
+            if (window.innerWidth <= 768 && isVisible) {
+                controlPanel.classList.remove('mobile-visible');
+                // Reset menu button icon
+                const menuIcon = menuToggle.querySelector('.hamburger-icon');
+                if (menuIcon) menuIcon.textContent = '☰';
+            }
+        });
+    }
+
+    // Facility search autocomplete
+    const facilitySearch = document.getElementById('facility-search');
+    const facilitySuggestions = document.getElementById('facility-suggestions');
+
+    if (facilitySearch && facilitySuggestions) {
+        facilitySearch.addEventListener('input', (e) => {
+            const query = e.target.value.trim().toLowerCase();
+
+            if (query.length < 2) {
+                facilitySuggestions.classList.remove('active');
+                facilitySuggestions.innerHTML = '';
+                return;
+            }
+
+            // Search facilities (use facilityData from global state)
+            const matches = facilityData
+                .filter(facility => {
+                    const siteName = (facility['site name'] || facility['site_name'] || '').toLowerCase();
+                    const companyName = (facility['company name'] || facility['company_name'] || '').toLowerCase();
+                    return siteName.includes(query) || companyName.includes(query);
+                })
+                .slice(0, 10); // Limit to 10 suggestions
+
+            if (matches.length === 0) {
+                facilitySuggestions.classList.remove('active');
+                facilitySuggestions.innerHTML = '';
+                return;
+            }
+
+            // Build suggestions HTML
+            const suggestionsHTML = matches.map(facility => {
+                const siteName = facility['site name'] || facility['site_name'] || '';
+                const companyName = facility['company name'] || facility['company_name'] || '';
+                const displayName = siteName && companyName ? `${siteName}, ${companyName}` : siteName || companyName || 'Unknown';
+
+                const city = facility['site city'] || facility['site_city'] || '';
+                const state = facility['site state'] || facility['site_state'] || '';
+                const emissions = parseFloat(facility['total emissions'] || facility['total_emissions']) || 0;
+                const lat = parseFloat(facility['site latitude'] || facility['site_latitude']);
+                const lng = parseFloat(facility['site longitude'] || facility['site_longitude']);
+
+                return `
+                    <div class="autocomplete-item" data-lat="${lat}" data-lng="${lng}" data-name="${displayName}">
+                        <div class="autocomplete-item-name">${displayName}</div>
+                        <div class="autocomplete-item-details">
+                            ${city}, ${state} ${formatEmissions(emissions)}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            facilitySuggestions.innerHTML = suggestionsHTML;
+            facilitySuggestions.classList.add('active');
+
+            // Add click handlers to suggestions
+            facilitySuggestions.querySelectorAll('.autocomplete-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const lat = parseFloat(item.dataset.lat);
+                    const lng = parseFloat(item.dataset.lng);
+                    const name = item.dataset.name;
+
+                    // Call map-specific zoom function (must be defined in app_gmaps.js or app_maplibre.js)
+                    if (typeof zoomToFacility === 'function') {
+                        zoomToFacility(lat, lng, name);
+                    }
+
+                    // Clear search
+                    facilitySearch.value = '';
+                    facilitySuggestions.classList.remove('active');
+                    facilitySuggestions.innerHTML = '';
+                });
+            });
+        });
+
+        // Close suggestions when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!facilitySearch.contains(e.target) && !facilitySuggestions.contains(e.target)) {
+                facilitySuggestions.classList.remove('active');
+            }
+        });
+    }
+
     // Initialize theme
     setTheme(isDarkTheme);
 });
@@ -440,6 +608,101 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================================================
 // Utility Functions
 // ============================================================================
+
+/**
+ * Format GEOID in readable format
+ * Example: "170310839001" -> "IL / County 031 / Tract 083900 / Block 1"
+ */
+function formatGeoid(geoid) {
+    if (!geoid || geoid.length !== 12) return geoid || 'Unknown';
+
+    const state = geoid.substring(0, 2);
+    const county = geoid.substring(2, 5);
+    const tract = geoid.substring(5, 11);
+    const blockGroup = geoid.substring(11, 12);
+
+    // State FIPS to abbreviation (add more as needed)
+    const stateMap = {
+        '17': 'IL',
+        '06': 'CA',
+        '36': 'NY',
+        '48': 'TX',
+        '12': 'FL'
+    };
+
+    const stateAbbr = stateMap[state] || `State ${state}`;
+
+    return `${stateAbbr} / County ${county} / Tract ${tract} / Block ${blockGroup}`;
+}
+
+/**
+ * Format GEOID in two-line format for compact display
+ * Returns object with line1 and line2
+ * Example: "170310839001" -> { line1: "Cook County, IL", line2: "Tract 083900 / Block 1" }
+ */
+function formatGeoidTwoLine(geoid) {
+    if (!geoid || geoid.length !== 12) {
+        return { line1: geoid || 'Unknown', line2: '' };
+    }
+
+    const state = geoid.substring(0, 2);
+    const county = geoid.substring(2, 5);
+    const tract = geoid.substring(5, 11);
+    const blockGroup = geoid.substring(11, 12);
+
+    // State FIPS to abbreviation (add more as needed)
+    const stateMap = {
+        '17': 'IL',
+        '06': 'CA',
+        '36': 'NY',
+        '48': 'TX',
+        '12': 'FL'
+    };
+
+    const stateAbbr = stateMap[state] || `State ${state}`;
+
+    // Look up county name
+    const countyFips = state + county; // e.g., "17031"
+    const countyName = COUNTY_NAMES[countyFips];
+
+    return {
+        line1: countyName ? `${countyName} County, ${stateAbbr}` : `${stateAbbr} / County ${county}`,
+        line2: `Tract ${tract} / Block ${blockGroup}`
+    };
+}
+
+/**
+ * Aggregate facility data by census GEOID
+ * Returns { totalEmissions, totalFacilities, highRisk, mediumRisk, lowRisk }
+ */
+function aggregateFacilitiesByGeoid(geoid) {
+    const facilities = facilityData.filter(facility => {
+        const facilityGeoid = facility.GEOID10 || facility.geoid10 || facility.GEOID;
+        return facilityGeoid === geoid;
+    });
+
+    const stats = {
+        totalEmissions: 0,
+        totalFacilities: facilities.length,
+        highRisk: 0,
+        mediumRisk: 0,
+        lowRisk: 0
+    };
+
+    facilities.forEach(facility => {
+        // Sum emissions
+        const emissions = parseFloat(facility['total emissions'] || facility['total_emissions']) || 0;
+        stats.totalEmissions += emissions;
+
+        // Count risk levels
+        const risk = facility['Risk Level'] || facility['risk_level'] || '';
+        if (risk === 'High') stats.highRisk++;
+        else if (risk === 'Medium') stats.mediumRisk++;
+        else if (risk === 'Low') stats.lowRisk++;
+    });
+
+    return stats;
+}
 
 /**
  * Format number with commas
@@ -464,4 +727,4 @@ function formatEmissions(emissions) {
     }
 }
 
-console.log('✓ app_common.js loaded - shared utilities ready');
+console.log('app_common.js loaded - shared utilities ready');

@@ -6,7 +6,7 @@ function initializePMTilesProtocol() {
     return new Promise((resolve, reject) => {
         // If already registered, resolve immediately
         if (pmtilesProtocolRegistered) {
-            console.log('✓ PMTiles protocol already registered');
+            console.log('PMTiles protocol already registered');
             resolve(true);
             return;
         }
@@ -31,7 +31,7 @@ function initializePMTilesProtocol() {
                     });
 
                     pmtilesProtocolRegistered = true;
-                    console.log('✓ PMTiles protocol registered successfully');
+                    console.log('PMTiles protocol registered successfully');
                     resolve(true);
                 } catch (e) {
                     console.error('Failed to register PMTiles protocol:', e);
@@ -197,7 +197,7 @@ async function initializePMTilesSources() {
                 url: 'pmtiles:///api/boundaries/block_groups.pmtiles',
                 promoteId: 'GEOID'
             });
-            console.log('✓ Block groups PMTiles source initialized');
+            console.log('Block groups PMTiles source initialized');
         }
 
         if (!map.getSource('census-tracts-tiles')) {
@@ -207,7 +207,7 @@ async function initializePMTilesSources() {
                 url: 'pmtiles:///api/boundaries/census_tracts.pmtiles',
                 promoteId: 'GEOID'
             });
-            console.log('✓ Census tracts PMTiles source initialized');
+            console.log('Census tracts PMTiles source initialized');
         }
     } catch (e) {
         console.error('✗ Failed to initialize PMTiles sources:', e);

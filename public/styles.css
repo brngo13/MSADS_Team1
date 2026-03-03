@@ -312,7 +312,8 @@ body {
     padding: 20px;
     box-shadow: var(--panel-shadow);
     z-index: 1000;
-    min-width: 260px;
+    width: 280px;
+    max-width: 280px;
 }
 
 .legend-title {
@@ -323,6 +324,13 @@ body {
     text-transform: uppercase;
     color: var(--text-secondary);
     margin-bottom: 16px;
+}
+
+.legend-text {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+    max-width: 100%;
 }
 
 .legend-item {

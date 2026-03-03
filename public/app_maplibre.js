@@ -6,6 +6,13 @@
  * This file contains only MapLibre-specific implementations
  */
 
+// MapLibre-specific state (must be declared before use)
+let emissionIndex = null;  // Supercluster instance
+let emissionsGeoJSON = {
+    type: 'FeatureCollection',
+    features: []
+};
+
 // Initialize MapLibre GL JS map
 const map = new maplibregl.Map({
     container: 'map',
@@ -19,8 +26,10 @@ const map = new maplibregl.Map({
     zoom: 7
 });
 
-// Add navigation controls
-map.addControl(new maplibregl.NavigationControl(), 'top-right');
+// Add navigation controls (only on desktop)
+if (window.innerWidth > 768) {
+    map.addControl(new maplibregl.NavigationControl(), 'top-right');
+}
 
 // MapLibre-specific: Basemap tile sources
 const TILE_SOURCES = {
@@ -33,6 +42,10 @@ const TILE_SOURCES = {
  * MapLibre-specific theme update
  */
 function updateMapTheme(dark) {
+    // Close any open popups when theme changes
+    const popups = document.querySelectorAll('.maplibregl-popup');
+    popups.forEach(popup => popup.remove());
+
     // Update map basemap (only if map is loaded)
     if (!map.loaded || !map.loaded()) return;
 
@@ -142,16 +155,59 @@ map.on('load', () => {
 map.on('zoom', updateClusters);
 map.on('move', updateClusters);
 
-// MapLibre-specific state (emissions are in app_common.js)
-let emissionIndex = null;  // Supercluster instance
-let emissionsGeoJSON = {
-    type: 'FeatureCollection',
-    features: []
-};
-
 // MapLibre-specific event listeners
 // (Common listeners are in app_common.js)
-document.getElementById('load-social-data').addEventListener('click', loadAdiLayer);
+
+// Track census data state
+let censusDataLoaded = false;
+let censusDataVisible = false;
+
+// Toggle census data button handler
+document.getElementById('toggle-census-data').addEventListener('click', async () => {
+    const button = document.getElementById('toggle-census-data');
+
+    if (!censusDataLoaded) {
+        // Load data for the first time
+        await loadAdiLayer();
+        censusDataLoaded = true;
+        censusDataVisible = true;
+        button.textContent = 'Hide Census Data';
+    } else if (censusDataVisible) {
+        // Hide the layer
+        if (map.getLayer('adi-fill')) {
+            map.setLayoutProperty('adi-fill', 'visibility', 'none');
+        }
+        if (map.getLayer('adi-outline')) {
+            map.setLayoutProperty('adi-outline', 'visibility', 'none');
+        }
+
+        // Hide legend
+        const adiLegend = document.getElementById('adi-legend');
+        if (adiLegend) {
+            adiLegend.style.display = 'none';
+        }
+
+        censusDataVisible = false;
+        button.textContent = 'Show Census Data';
+    } else {
+        // Show the layer
+        if (map.getLayer('adi-fill')) {
+            map.setLayoutProperty('adi-fill', 'visibility', 'visible');
+        }
+        if (map.getLayer('adi-outline')) {
+            map.setLayoutProperty('adi-outline', 'visibility', 'visible');
+        }
+
+        // Show legend
+        const adiLegend = document.getElementById('adi-legend');
+        if (adiLegend) {
+            adiLegend.style.display = 'block';
+        }
+
+        censusDataVisible = true;
+        button.textContent = 'Hide Census Data';
+    }
+});
 
 // Data loading functions are in app_common.js
 // loadAvailableYears, loadFacilityData, handleYearChange, loadYearData removed
@@ -581,29 +637,103 @@ map.on('click', 'adi-fill', (e) => {
     const feature = e.features[0];
     const geoid = feature.properties.GEOID10;
     const adi = adiData[geoid];
-    const name = feature.properties.NAMELSAD10 || 'Unknown';
 
-    if (!adi) {
-        new maplibregl.Popup()
-            .setLngLat(e.lngLat)
-            .setHTML(`<div style="padding: 8px;">
-                <strong>${name}</strong><br>
-                GEOID: ${geoid}<br>
-                No ADI data available
-            </div>`)
-            .addTo(map);
-        return;
+    // Get aggregated facility data for this geography
+    const facilityStats = aggregateFacilitiesByGeoid(geoid);
+
+    // Format GEOID in two lines
+    const geoidFormatted = formatGeoidTwoLine(geoid);
+
+    // Dark mode colors
+    const bgColor = isDarkTheme ? '#1f2937' : '#ffffff';
+    const textColor = isDarkTheme ? '#e5e7eb' : '#1f2937';
+    const secondaryColor = isDarkTheme ? '#9ca3af' : '#6b7280';
+    const borderColor = isDarkTheme ? '#374151' : '#e5e7eb';
+
+    // Build popup HTML with theme-aware styling and inline close button
+    let popupHTML = `
+        <div style="font-family: 'IBM Plex Mono', monospace; padding: 10px; background: ${bgColor}; color: ${textColor};">
+            <div style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid ${borderColor}; display: flex; justify-content: space-between; align-items: flex-start;">
+                <div style="flex: 1;">
+                    <div style="font-size: 13px; font-weight: 600; color: #10b981; line-height: 1.4;">
+                        ${geoidFormatted.line1}
+                    </div>
+                    <div style="font-size: 12px; font-weight: 600; color: #10b981; line-height: 1.4; margin-top: 2px;">
+                        ${geoidFormatted.line2}
+                    </div>
+                    <div style="font-size: 9px; color: ${secondaryColor}; margin-top: 6px; font-family: monospace;">
+                        GEOID: ${geoid}
+                    </div>
+                </div>
+                <button onclick="this.closest('.maplibregl-popup').remove()" style="background: none; border: none; color: ${secondaryColor}; font-size: 20px; cursor: pointer; padding: 0; margin-left: 12px; line-height: 1; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">&times;</button>
+            </div>
+    `;
+
+    // ADI Data
+    if (adi) {
+        popupHTML += `
+            <div style="margin-bottom: 12px;">
+                <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: ${secondaryColor}; margin-bottom: 6px; font-weight: 600;">
+                    Area Deprivation Index
+                </div>
+                <div style="font-size: 12px; display: flex; gap: 16px;">
+                    <div>
+                        <span style="color: ${secondaryColor};">National:</span>
+                        <strong style="color: ${textColor};">${adi.natRank}/100</strong>
+                    </div>
+                    <div>
+                        <span style="color: ${secondaryColor};">State:</span>
+                        <strong style="color: ${textColor};">${adi.stateRank}/10</strong>
+                    </div>
+                </div>
+            </div>
+        `;
     }
 
-    new maplibregl.Popup()
+    // Facility Data
+    if (facilityStats.totalFacilities > 0) {
+        const riskFraction = `${facilityStats.highRisk}/${facilityStats.totalFacilities}`;
+        const riskColor = facilityStats.highRisk > 0 ? '#ef4444' : '#10b981';
+
+        popupHTML += `
+            <div style="margin-bottom: 8px;">
+                <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: ${secondaryColor}; margin-bottom: 6px; font-weight: 600;">
+                    Facility Emissions
+                </div>
+                <div style="font-size: 12px; margin-bottom: 4px;">
+                    <span style="color: ${secondaryColor};">Total:</span>
+                    <strong style="color: ${textColor};">${formatEmissions(facilityStats.totalEmissions)}</strong>
+                </div>
+                <div style="font-size: 12px;">
+                    <span style="color: ${secondaryColor};">High Risk Sites:</span>
+                    <strong style="color: ${riskColor};">${riskFraction}</strong>
+                </div>
+            </div>
+        `;
+    } else {
+        popupHTML += `
+            <div style="font-size: 11px; color: ${secondaryColor}; font-style: italic;">
+                No facilities in this area
+            </div>
+        `;
+    }
+
+    popupHTML += '</div>';
+
+    const popup = new maplibregl.Popup({
+        className: isDarkTheme ? 'census-popup-dark' : 'census-popup-light'
+    })
         .setLngLat(e.lngLat)
-        .setHTML(`<div style="padding: 8px;">
-            <strong>${name}</strong><br>
-            GEOID: ${geoid}<br>
-            ADI National Rank: ${adi.natRank}/100<br>
-            ADI State Rank: ${adi.stateRank}/10
-        </div>`)
+        .setHTML(popupHTML)
         .addTo(map);
+
+    // Add event listener to custom close button after popup is added to DOM
+    setTimeout(() => {
+        const closeBtn = document.querySelector('.census-popup-dark button, .census-popup-light button');
+        if (closeBtn) {
+            closeBtn.onclick = () => popup.remove();
+        }
+    }, 0);
 });
 
 map.on('mouseenter', 'adi-fill', () => {
@@ -615,4 +745,28 @@ map.on('mouseleave', 'adi-fill', () => {
 
 // Tab switching, updateLegend, and old event listeners removed (not in unified index.html)
 
-console.log('✓ app_maplibre.js loaded - MapLibre implementation ready');
+/**
+ * Zoom to a specific facility (called from facility search)
+ */
+function zoomToFacility(lat, lng, name) {
+    if (!map) return;
+
+    // Zoom to facility
+    map.flyTo({
+        center: [lng, lat], // MapLibre uses [lng, lat] order
+        zoom: 15,
+        duration: 1500
+    });
+
+    // Optional: Show popup
+    new maplibregl.Popup({
+        className: isDarkTheme ? 'census-popup-dark' : 'census-popup-light'
+    })
+        .setLngLat([lng, lat])
+        .setHTML(`<div style="padding: 8px; font-family: 'IBM Plex Mono', monospace;">
+                    <strong>${name}</strong>
+                  </div>`)
+        .addTo(map);
+}
+
+console.log('app_maplibre.js loaded - MapLibre implementation ready');
