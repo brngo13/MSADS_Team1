@@ -1,6 +1,5 @@
 # Dependencies
 node_modules/
-package-lock.json
 
 # Logs
 logs/
@@ -28,6 +27,9 @@ out/
 config.json
 gee_creds.json
 gcs_credentials.json
+
+# Firebase deployment artifacts
+.firebase/
 
 # Temporary files
 tmp/
