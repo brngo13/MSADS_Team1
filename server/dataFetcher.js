@@ -73,7 +73,7 @@ const CACHE_DIR = path.join(__dirname, '../data_cache');
 
 // GCS bucket structure (your actual paths)
 const GCS_PATHS = {
-    predictions: 'Data/Predictions',           // {year}.csv
+    predictions: 'Data/Predictions',           // annual_risk_with_socioeconomic_{year}_RS.csv
     adi: 'Data/adi_data',                     // USA_{year}_ADI_Census_Block...csv
     nei: 'Data/NEI_RS',                       // {year}_NEI_Facility_summary.csv
     boundaries: 'Data/Boundaries'              // IL_block_groups.geojson, etc.
@@ -166,8 +166,8 @@ async function fetchDataFile(gcsPath, localCategory, localFilename) {
  * GCS path: Data/Predictions/{year}.csv
  */
 async function getPredictionsData(year) {
-    const gcsPath = `${GCS_PATHS.predictions}/${year}.csv`;
-    const localFilename = `${year}.csv`;
+    const gcsPath = `${GCS_PATHS.predictions}/annual_risk_with_socioeconomic_${year}_UI.csv`;
+    const localFilename = `annual_risk_with_socioeconomic_${year}_RS.csv`;
     return await fetchDataFile(gcsPath, 'predictions', localFilename);
 }
 

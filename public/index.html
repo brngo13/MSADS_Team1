@@ -62,12 +62,80 @@
         }
 
         /* Emissions slider cursor */
+        /* Slider styling - highlight right side (> values) in green */
+        .emissions-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            border-radius: 3px;
+            background: linear-gradient(to right,
+                rgba(128, 128, 128, 0.2) 0%,
+                rgba(128, 128, 128, 0.2) var(--slider-percent, 50%),
+                rgba(16, 185, 129, 0.3) var(--slider-percent, 50%),
+                rgba(16, 185, 129, 0.3) 100%);
+            outline: none;
+            cursor: grab;
+        }
+
+        .emissions-slider:active {
+            cursor: grabbing;
+        }
+
+        /* Webkit slider thumb */
+        .emissions-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #10b981;
+            border: 2px solid #ffffff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            cursor: grab;
+            transition: all 0.15s;
+        }
+
+        .emissions-slider::-webkit-slider-thumb:hover {
+            background: #059669;
+            transform: scale(1.1);
+        }
+
+        .emissions-slider:active::-webkit-slider-thumb {
+            cursor: grabbing;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Firefox slider thumb */
+        .emissions-slider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #10b981;
+            border: 2px solid #ffffff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            cursor: grab;
+            transition: all 0.15s;
+        }
+
+        .emissions-slider::-moz-range-thumb:hover {
+            background: #059669;
+            transform: scale(1.1);
+        }
+
         #emissions-slider {
             cursor: grab;
         }
 
         #emissions-slider:active {
             cursor: grabbing;
+        }
+
+        /* Remove dropdown arrow from search input */
+        #facility-search {
+            background-image: none !important;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
         }
 
         /* Panel tabs */
@@ -111,10 +179,56 @@
 
         .tab-panel {
             display: none;
+            flex: 1;
+            overflow-y: auto;
+            scrollbar-gutter: stable;
+            min-height: 0;
         }
 
         .tab-panel.active {
             display: block;
+        }
+
+        .tab-panel::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .tab-panel::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+        }
+
+        .tab-panel::-webkit-scrollbar-thumb {
+            background: rgba(0, 255, 136, 0.3);
+            border-radius: 3px;
+        }
+
+        /* Risk metric toggle buttons */
+        .risk-metric-toggle {
+            flex: 1;
+            padding: 8px 12px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            background: rgba(128, 128, 128, 0.1);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .risk-metric-toggle:hover {
+            color: var(--text-primary);
+            background: rgba(128, 128, 128, 0.15);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .risk-metric-toggle.active {
+            color: white;
+            background: #10b981;
+            border-color: #10b981;
+            font-weight: 600;
         }
 
         /* Info button */
@@ -122,9 +236,9 @@
             width: 24px;
             height: 24px;
             border-radius: 50%;
-            background: #10b981;
-            border: 1px solid #10b981;
-            color: white;
+            background: transparent;
+            border: 2px solid #10b981;
+            color: #10b981;
             font-size: 14px;
             cursor: pointer;
             display: flex;
@@ -135,9 +249,9 @@
         }
 
         .info-button:hover {
-            background: #34d399;
+            background: rgba(16, 185, 129, 0.1);
             border-color: #34d399;
-            color: white;
+            color: #34d399;
         }
 
         /* Info modal */
@@ -545,7 +659,7 @@
             </div>
 
             <div class="panel-section">
-                <div class="section-label">Search Facilities</div>
+                <div class="section-label">Search</div>
                 <div style="position: relative;">
                     <input
                         type="text"
@@ -558,52 +672,86 @@
                 </div>
             </div>
 
+            <!-- All Filters Combined -->
             <div class="panel-section">
-                <div class="section-label">Risk Level Filter</div>
-                <select id="risk-filter" class="year-selector">
-                    <option value="">All Risk Levels</option>
-                    <option value="High">High Risk Only</option>
-                    <option value="Medium">Medium Risk Only</option>
-                    <option value="Low">Low Risk Only</option>
-                </select>
-            </div>
+                <div class="section-label">Filters</div>
 
-            <div class="panel-section">
-                <div class="section-label">Industry Sector Filter</div>
-                <select id="sector-filter" class="year-selector">
-                    <option value="">All Sectors</option>
-                    <option value="Manufacturing">Manufacturing</option>
-                    <option value="Utilities">Utilities</option>
-                    <option value="Transportation & Warehousing">Transportation & Warehousing</option>
-                    <option value="Mining, Oil & Gas Extraction">Mining, Oil & Gas</option>
-                    <option value="Health Care">Health Care</option>
-                    <option value="Educational Services">Educational Services</option>
-                    <option value="Public Administration">Public Administration</option>
-                    <option value="Wholesale Trade">Wholesale Trade</option>
-                    <option value="Construction">Construction</option>
-                    <option value="Agriculture, Forestry, Fishing">Agriculture</option>
-                    <option value="Administrative & Support">Administrative & Support</option>
-                    <option value="Other">Other</option>
-                </select>
-            </div>
-
-            <div class="panel-section">
-                <div class="section-label">Total Emissions Filter</div>
-                <div style="position: relative; margin-top: 24px;">
-                    <div id="emissions-value-container" style="position: absolute; top: -20px; left: 0; font-size: 12px; color: var(--text-primary); font-weight: 500; white-space: nowrap; transition: left 0.1s ease;">
-                        > <span id="emissions-value">1</span> tons/year
+                <!-- Industry Sector -->
+                <div style="margin-bottom: 20px;">
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; font-weight: 500;">
+                        Industry Sector
                     </div>
-                    <input
-                        type="range"
-                        id="emissions-slider"
-                        min="0"
-                        max="13"
-                        step="1"
-                        value="1"
-                        style="width: 100%; margin-bottom: 12px;">
-                    <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-secondary);">
-                        <span>None</span>
-                        <span>10k tons</span>
+                    <select id="sector-filter" class="year-selector">
+                        <option value="">All Sectors</option>
+                        <option value="Manufacturing">Manufacturing</option>
+                        <option value="Utilities">Utilities</option>
+                        <option value="Transportation & Warehousing">Transportation & Warehousing</option>
+                        <option value="Mining, Oil & Gas Extraction">Mining, Oil & Gas</option>
+                        <option value="Health Care">Health Care</option>
+                        <option value="Educational Services">Educational Services</option>
+                        <option value="Public Administration">Public Administration</option>
+                        <option value="Wholesale Trade">Wholesale Trade</option>
+                        <option value="Construction">Construction</option>
+                        <option value="Agriculture, Forestry, Fishing">Agriculture</option>
+                        <option value="Administrative & Support">Administrative & Support</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <!-- Reported Emissions -->
+                <div style="margin-bottom: 20px;">
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; font-weight: 500;">
+                        Reported Emissions
+                    </div>
+                    <div style="position: relative; margin-top: 20px;">
+                        <div id="emissions-value-container" style="position: absolute; top: -20px; left: 0; font-size: 11px; color: var(--text-primary); font-weight: 600; white-space: nowrap; transition: left 0.1s ease; background: var(--panel-bg); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border);">
+                            > <span id="emissions-value">1</span> tons/year
+                        </div>
+                        <input
+                            type="range"
+                            id="emissions-slider"
+                            class="emissions-slider"
+                            min="0"
+                            max="13"
+                            step="1"
+                            value="1"
+                            style="width: 100%;">
+                    </div>
+                </div>
+
+                <!-- Underreporting Risk -->
+                <div style="margin-bottom: 20px;">
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; font-weight: 500;">
+                        Underreporting Risk Percentile
+                    </div>
+                    <div style="position: relative; margin-top: 20px;">
+                        <div id="risk-percentile-value-container" style="position: absolute; top: -20px; left: 0; font-size: 11px; color: var(--text-primary); font-weight: 600; white-space: nowrap; transition: left 0.1s ease; background: var(--panel-bg); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border);">
+                            > <span id="risk-percentile-value">0</span>%ile
+                        </div>
+                        <input
+                            type="range"
+                            id="risk-percentile-slider"
+                            class="emissions-slider"
+                            min="0"
+                            max="100"
+                            value="0"
+                            step="5"
+                            style="width: 100%;">
+                    </div>
+                </div>
+
+                <!-- Risk Metric Toggle -->
+                <div>
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; font-weight: 500;">
+                        Risk Metric to Display
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button id="risk-metric-absolute" class="risk-metric-toggle active">
+                            Absolute
+                        </button>
+                        <button id="risk-metric-equity" class="risk-metric-toggle">
+                            Equity-Weighted
+                        </button>
                     </div>
                 </div>
             </div>
@@ -636,17 +784,8 @@
                     </select>
                 </div>
 
-                <!-- Indicator Selection -->
-                <div style="margin-bottom: 12px;">
-                    <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Socioeconomic Indicator</label>
-                    <select id="social-indicator-selector" class="year-selector">
-                        <option value="">Select Indicator</option>
-                        <option value="adi">Area Deprivation Index (ADI)</option>
-                    </select>
-                </div>
-
                 <!-- ADI Rank Type Selection -->
-                <div id="adi-rank-type-section" style="margin-bottom: 12px; display: none;">
+                <div id="adi-rank-type-section" style="margin-bottom: 12px;">
                     <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">ADI Rank Type</label>
                     <select id="adi-rank-type-selector" class="year-selector">
                         <option value="national">National Rank (1-100)</option>
@@ -730,23 +869,25 @@
         <!-- Facility Risk Legend (always visible below ADI when both shown) -->
         <div id="facility-legend">
             <div class="legend-title">Emitting Facilities</div>
-            <div class="legend-text" style="font-size: 11px; color: var(--text-secondary); margin-bottom: 8px; line-height: 1.5;">
-                Facility risk represents the predicted probability of underreporting emissions. Circle color indicates risk level:
+            <div class="legend-text" style="font-size: 11px; color: var(--text-secondary); margin-bottom: 12px; line-height: 1.5;">
+                Facility risk represents the predicted probability of underreporting emissions. Circle color indicates risk score:
             </div>
-            <div class="legend-item">
-                <div class="legend-circle" style="background: #ef4444;"></div>
-                <div class="legend-text">High Risk</div>
+
+            <!-- Gradient bar with dots on the bar -->
+            <div style="margin-bottom: 12px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                    <span style="font-size: 10px; color: var(--text-secondary);">Low Risk</span>
+                    <span style="font-size: 10px; color: var(--text-secondary);">High Risk</span>
+                </div>
+                <div style="position: relative; height: 16px;">
+                    <div style="position: absolute; width: 100%; height: 16px; background: linear-gradient(to right, #10b981, #fbbf24, #ef4444); border-radius: 8px;"></div>
+                    <div style="position: absolute; left: 0; top: 50%; transform: translate(0%, -50%); width: 18px; height: 18px; border-radius: 50%; background: #10b981; border: 2.5px solid #15803d; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"></div>
+                    <div style="position: absolute; right: 0; top: 50%; transform: translate(0%, -50%); width: 18px; height: 18px; border-radius: 50%; background: #ef4444; border: 2.5px solid #991b1b; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"></div>
+                </div>
             </div>
-            <div class="legend-item">
-                <div class="legend-circle amber"></div>
-                <div class="legend-text">Medium Risk</div>
-            </div>
-            <div class="legend-item">
-                <div class="legend-circle green"></div>
-                <div class="legend-text">Low Risk</div>
-            </div>
-            <div class="legend-text" style="font-size: 11px; color: var(--text-secondary); margin-top: 8px;">
-                Circle size is relative to total emissions
+
+            <div class="legend-text" style="font-size: 11px; color: var(--text-secondary);">
+                Circle size is relative to total reported emissions
             </div>
         </div>
 
@@ -769,7 +910,7 @@
                 <button id="facility-modal-close" style="background: none; border: none; color: var(--text-secondary);
                         font-size: 24px; cursor: pointer; padding: 0; width: 30px; height: 30px;">&times;</button>
             </div>
-            <div id="facility-details-content" style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">
+            <div id="facility-details-content" style="font-family: system-ui, -apple-system, sans-serif; font-size: 13px;">
                 <!-- Content populated by JavaScript -->
             </div>
         </div>

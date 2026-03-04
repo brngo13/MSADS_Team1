@@ -11,6 +11,7 @@ let facilityData = []; // All facility data from predictions CSV
 let filteredData = []; // Filtered facility data based on user selections
 let adiData = {}; // ADI data keyed by GEOID
 let isDarkTheme = localStorage.getItem('theme') !== 'light';
+let currentRiskMetric = 'absolute'; // 'absolute' or 'equity'
 
 // NAICS sector mapping (2-digit codes to simplified sectors)
 const NAICS_SECTORS = {
@@ -123,10 +124,23 @@ async function loadFacilityData() {
             header: true,
             skipEmptyLines: true,
             complete: (results) => {
+                // Debug: log first row to see available columns
+                if (results.data.length > 0) {
+                    console.log('CSV columns:', Object.keys(results.data[0]));
+                    console.log('First facility:', results.data[0]);
+                }
+
+                // Convert GEOID10 to integer for efficient matching
+                results.data.forEach(row => {
+                    if (row.GEOID10) {
+                        row.GEOID10 = parseInt(row.GEOID10);
+                    }
+                });
+
                 facilityData = results.data.filter(row => {
-                    return row['site latitude'] && row['site longitude'] &&
-                           !isNaN(parseFloat(row['site latitude'])) &&
-                           !isNaN(parseFloat(row['site longitude']));
+                    return row['site_latitude'] && row['site_longitude'] &&
+                           !isNaN(parseFloat(row['site_latitude'])) &&
+                           !isNaN(parseFloat(row['site_longitude']));
                 });
 
                 applyFilters();
@@ -217,6 +231,33 @@ function updateSliderValuePosition() {
 }
 
 /**
+ * Update risk percentile slider value display position
+ */
+function updateRiskPercentileValuePosition() {
+    const slider = document.getElementById('risk-percentile-slider');
+    const valueContainer = document.getElementById('risk-percentile-value-container');
+
+    if (!slider || !valueContainer) return;
+
+    const sliderValue = parseInt(slider.value) || 0;
+    const min = parseInt(slider.min);
+    const max = parseInt(slider.max);
+    const percentage = (sliderValue - min) / (max - min);
+
+    // Get slider width and calculate position
+    const sliderWidth = slider.offsetWidth;
+    const containerWidth = valueContainer.offsetWidth;
+
+    // Position at percentage, centered on thumb
+    let leftPosition = percentage * sliderWidth - (containerWidth / 2);
+
+    // Constrain to bounds
+    leftPosition = Math.max(0, Math.min(leftPosition, sliderWidth - containerWidth));
+
+    valueContainer.style.left = `${leftPosition}px`;
+}
+
+/**
  * Apply filters and update filtered data
  * Note: This calls map-specific plotEmissions() which must be defined in app_gmaps.js or app_maplibre.js
  */
@@ -227,8 +268,11 @@ function applyFilters() {
 
     // Use discrete emission threshold
     const minEmissions = EMISSION_THRESHOLDS[sliderIndex];
-    const riskLevel = document.getElementById('risk-filter').value;
     const sectorFilter = document.getElementById('sector-filter')?.value || '';
+
+    // Get risk percentile filter
+    const riskPercentileSlider = document.getElementById('risk-percentile-slider');
+    const minRiskPercentile = riskPercentileSlider ? parseInt(riskPercentileSlider.value) : 0;
 
     // Update emissions value display
     let displayValue;
@@ -243,24 +287,33 @@ function applyFilters() {
     }
     document.getElementById('emissions-value').textContent = displayValue;
 
+    // Update risk percentile value display
+    if (riskPercentileSlider) {
+        const valueDisplay = document.getElementById('risk-percentile-value');
+        if (valueDisplay) {
+            valueDisplay.textContent = minRiskPercentile;
+        }
+        updateRiskPercentileValuePosition();
+    }
+
     // Update position
     updateSliderValuePosition();
 
     // Filter facilityData
     filteredData = facilityData.filter(site => {
-        const emissions = parseFloat(site['total emissions'] || site['total_emissions']) || 0;
-        const risk = site['Risk Level'] || site['risk_level'] || '';
-        const naicsCode = site['primary naics code'] || site['primary_naics_code'] || '';
+        const emissions = parseFloat(site['total_emissions']) || 0;
+        const naicsCode = site['naics_code'] || '';
         const sector = getNaicsSector(naicsCode);
+        const riskPercentile = parseFloat(site['risk_percentile']) || 0;
 
         // Apply minimum emissions filter
         if (emissions < minEmissions) return false;
 
-        // Apply risk level filter
-        if (riskLevel && risk !== riskLevel) return false;
-
         // Apply sector filter
         if (sectorFilter && sector !== sectorFilter) return false;
+
+        // Apply risk percentile filter
+        if (riskPercentile < minRiskPercentile) return false;
 
         return true;
     });
@@ -276,13 +329,79 @@ function applyFilters() {
 // ============================================================================
 
 /**
- * Get color based on risk level
+ * Get the risk value based on the currently selected metric
+ * Uses _norm columns for color gradients (0-1 scale)
  */
-function getRiskColor(riskLevel) {
-    if (riskLevel === 'High') return '#ef4444'; // Red
-    if (riskLevel === 'Medium') return '#f59e0b'; // Amber
-    if (riskLevel === 'Low') return '#10b981'; // Green
-    return '#808080'; // Gray for unknown
+function getRiskValue(facility) {
+    if (currentRiskMetric === 'equity') {
+        // Use equity_weighted_risk_norm (already 0-1 scale)
+        return parseFloat(facility['equity_weighted_risk_norm']);
+    } else {
+        // Use risk_norm (already 0-1 scale)
+        return parseFloat(facility['risk_norm']);
+    }
+}
+
+/**
+ * Get color based on continuous risk score
+ * 0-0.4: green
+ * 0.4-0.6: green to yellow gradient
+ * 0.6-0.8: yellow to red gradient
+ * 0.8+: solid red
+ */
+function getRiskColor(riskScore) {
+    // Handle invalid/missing values
+    if (riskScore === null || riskScore === undefined || isNaN(riskScore)) {
+        return '#808080'; // Gray
+    }
+
+    const risk = parseFloat(riskScore);
+
+    // 0-0.4: solid green
+    if (risk <= 0.4) {
+        return '#10b981'; // Green
+    }
+
+    // 0.4-0.6: green to yellow gradient
+    if (risk <= 0.6) {
+        const t = (risk - 0.4) / 0.2; // normalize to 0-1
+        return interpolateColor('#10b981', '#fbbf24', t);
+    }
+
+    // 0.6-0.8: yellow to red gradient
+    if (risk <= 0.8) {
+        const t = (risk - 0.6) / 0.2; // normalize to 0-1
+        return interpolateColor('#fbbf24', '#ef4444', t);
+    }
+
+    // 0.8+: solid red
+    return '#ef4444'; // Red
+}
+
+/**
+ * Interpolate between two hex colors
+ */
+function interpolateColor(color1, color2, t) {
+    const c1 = hexToRgb(color1);
+    const c2 = hexToRgb(color2);
+
+    const r = Math.round(c1.r + (c2.r - c1.r) * t);
+    const g = Math.round(c1.g + (c2.g - c1.g) * t);
+    const b = Math.round(c1.b + (c2.b - c1.b) * t);
+
+    return `rgb(${r}, ${g}, ${b})`;
+}
+
+/**
+ * Convert hex color to RGB
+ */
+function hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : { r: 0, g: 0, b: 0 };
 }
 
 /**
@@ -374,12 +493,6 @@ function setTheme(dark) {
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    // Risk level filter - apply in real-time
-    const riskFilter = document.getElementById('risk-filter');
-    if (riskFilter) {
-        riskFilter.addEventListener('change', applyFilters);
-    }
-
     // Sector filter - apply in real-time
     const sectorFilter = document.getElementById('sector-filter');
     if (sectorFilter) {
@@ -389,12 +502,77 @@ document.addEventListener('DOMContentLoaded', () => {
     // Emissions slider - update display and apply filter in real-time
     const slider = document.getElementById('emissions-slider');
     if (slider) {
+        const updateSliderGradient = () => {
+            const percent = ((slider.value - slider.min) / (slider.max - slider.min)) * 100;
+            slider.style.setProperty('--slider-percent', `${percent}%`);
+        };
+
         slider.addEventListener('input', () => {
+            updateSliderGradient();
             applyFilters(); // This will update display and position
         });
 
-        // Initialize position on load
-        setTimeout(updateSliderValuePosition, 100); // Small delay to ensure layout is complete
+        // Initialize position and gradient on load
+        setTimeout(() => {
+            updateSliderValuePosition();
+            updateSliderGradient();
+        }, 100);
+    }
+
+    // Risk percentile slider - update display and apply filter in real-time
+    const riskPercentileSlider = document.getElementById('risk-percentile-slider');
+    if (riskPercentileSlider) {
+        const updateRiskSliderGradient = () => {
+            const percent = ((riskPercentileSlider.value - riskPercentileSlider.min) /
+                           (riskPercentileSlider.max - riskPercentileSlider.min)) * 100;
+            riskPercentileSlider.style.setProperty('--slider-percent', `${percent}%`);
+        };
+
+        riskPercentileSlider.addEventListener('input', () => {
+            updateRiskSliderGradient();
+            applyFilters(); // This will update display and position
+        });
+
+        // Initialize position and gradient on load
+        setTimeout(() => {
+            updateRiskPercentileValuePosition();
+            updateRiskSliderGradient();
+        }, 100);
+    }
+
+    // Risk metric toggle buttons - setup the event listeners
+    // The actual update function will be set by the map implementation
+    window.onRiskMetricChange = null; // Callback to be set by map implementations
+
+    const riskMetricAbsolute = document.getElementById('risk-metric-absolute');
+    const riskMetricEquity = document.getElementById('risk-metric-equity');
+
+    if (riskMetricAbsolute && riskMetricEquity) {
+        riskMetricAbsolute.addEventListener('click', () => {
+            if (currentRiskMetric !== 'absolute') {
+                currentRiskMetric = 'absolute';
+                riskMetricAbsolute.classList.add('active');
+                riskMetricEquity.classList.remove('active');
+                console.log('Switched to absolute risk metric');
+                // Call the callback if it exists
+                if (window.onRiskMetricChange) {
+                    window.onRiskMetricChange();
+                }
+            }
+        });
+
+        riskMetricEquity.addEventListener('click', () => {
+            if (currentRiskMetric !== 'equity') {
+                currentRiskMetric = 'equity';
+                riskMetricEquity.classList.add('active');
+                riskMetricAbsolute.classList.remove('active');
+                console.log('Switched to equity-weighted risk metric');
+                // Call the callback if it exists
+                if (window.onRiskMetricChange) {
+                    window.onRiskMetricChange();
+                }
+            }
+        });
     }
 
     // Theme toggle
@@ -442,17 +620,6 @@ document.addEventListener('DOMContentLoaded', () => {
         infoModal.addEventListener('click', (e) => {
             if (e.target === infoModal) {
                 infoModal.classList.remove('active');
-            }
-        });
-    }
-
-    // Social indicator selection - show/hide ADI rank type
-    const indicatorSelector = document.getElementById('social-indicator-selector');
-    if (indicatorSelector) {
-        indicatorSelector.addEventListener('change', (e) => {
-            const adiSection = document.getElementById('adi-rank-type-section');
-            if (adiSection) {
-                adiSection.style.display = e.target.value === 'adi' ? 'block' : 'none';
             }
         });
     }
@@ -537,8 +704,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const matches = facilityData
                 .filter(facility => {
                     const siteName = (facility['site name'] || facility['site_name'] || '').toLowerCase();
-                    const companyName = (facility['company name'] || facility['company_name'] || '').toLowerCase();
-                    return siteName.includes(query) || companyName.includes(query);
+                    return siteName.includes(query);
                 })
                 .slice(0, 10); // Limit to 10 suggestions
 
@@ -550,21 +716,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Build suggestions HTML
             const suggestionsHTML = matches.map(facility => {
-                const siteName = facility['site name'] || facility['site_name'] || '';
-                const companyName = facility['company name'] || facility['company_name'] || '';
-                const displayName = siteName && companyName ? `${siteName}, ${companyName}` : siteName || companyName || 'Unknown';
+                const siteName = facility['site_name'] || 'Unknown';
 
-                const city = facility['site city'] || facility['site_city'] || '';
-                const state = facility['site state'] || facility['site_state'] || '';
-                const emissions = parseFloat(facility['total emissions'] || facility['total_emissions']) || 0;
-                const lat = parseFloat(facility['site latitude'] || facility['site_latitude']);
-                const lng = parseFloat(facility['site longitude'] || facility['site_longitude']);
+                // Note: city/state columns available in this dataset
+                const emissions = parseFloat(facility['total_emissions']) || 0;
+                const lat = parseFloat(facility['site_latitude']);
+                const lng = parseFloat(facility['site_longitude']);
 
                 return `
-                    <div class="autocomplete-item" data-lat="${lat}" data-lng="${lng}" data-name="${displayName}">
-                        <div class="autocomplete-item-name">${displayName}</div>
+                    <div class="autocomplete-item" data-lat="${lat}" data-lng="${lng}" data-name="${siteName}">
+                        <div class="autocomplete-item-name">${siteName}</div>
                         <div class="autocomplete-item-details">
-                            ${city}, ${state} ${formatEmissions(emissions)}
+                            ${formatEmissions(emissions)}
                         </div>
                     </div>
                 `;
@@ -673,33 +836,57 @@ function formatGeoidTwoLine(geoid) {
 
 /**
  * Aggregate facility data by census GEOID
- * Returns { totalEmissions, totalFacilities, highRisk, mediumRisk, lowRisk }
+ * Returns { totalEmissions, totalFacilities, highRisk, avgRiskScore }
  */
 function aggregateFacilitiesByGeoid(geoid) {
+    // Convert GEOID to integer for efficient matching
+    const geoidInt = parseInt(geoid);
+    console.log('Aggregating facilities for GEOID:', geoidInt);
+    console.log('Total facilityData length:', facilityData.length);
+
     const facilities = facilityData.filter(facility => {
         const facilityGeoid = facility.GEOID10 || facility.geoid10 || facility.GEOID;
-        return facilityGeoid === geoid;
+        return facilityGeoid === geoidInt;
     });
+
+    console.log('Matching facilities found:', facilities.length);
+    if (facilityData.length > 0 && facilities.length === 0) {
+        // Debug: show sample facility GEOID
+        const sampleGeoid = facilityData[0].GEOID10 || facilityData[0].geoid10 || facilityData[0].GEOID;
+        console.log('Sample facility GEOID:', sampleGeoid, 'vs requested:', geoidInt);
+        console.log('Sample facility:', facilityData[0]);
+    }
 
     const stats = {
         totalEmissions: 0,
         totalFacilities: facilities.length,
         highRisk: 0,
-        mediumRisk: 0,
-        lowRisk: 0
+        avgRiskScore: 0
     };
+
+    let totalRiskScore = 0;
+    let riskScoreCount = 0;
 
     facilities.forEach(facility => {
         // Sum emissions
-        const emissions = parseFloat(facility['total emissions'] || facility['total_emissions']) || 0;
+        const emissions = parseFloat(facility['total_emissions']) || 0;
         stats.totalEmissions += emissions;
 
-        // Count risk levels
-        const risk = facility['Risk Level'] || facility['risk_level'] || '';
-        if (risk === 'High') stats.highRisk++;
-        else if (risk === 'Medium') stats.mediumRisk++;
-        else if (risk === 'Low') stats.lowRisk++;
+        // Count high risk facilities (risk_norm > 0.6)
+        const riskScore = parseFloat(facility['risk_norm']);
+        if (!isNaN(riskScore)) {
+            totalRiskScore += riskScore;
+            riskScoreCount++;
+            if (riskScore > 0.6) {
+                stats.highRisk++;
+            }
+        }
     });
+
+    // Calculate average risk score
+    if (riskScoreCount > 0) {
+        stats.avgRiskScore = totalRiskScore / riskScoreCount;
+    }
 
     return stats;
 }

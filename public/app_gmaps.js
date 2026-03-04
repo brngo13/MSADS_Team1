@@ -27,7 +27,7 @@ function initMap() {
     // Get config from global (loaded in HTML)
     const config = window.APP_CONFIG || {};
     // Default to Illinois center (where the data is)
-    const mapDefaults = config.mapDefaults || { center: { lat: 40.6331, lng: -89.3985 }, zoom: 7 };
+    const mapDefaults = config.mapDefaults || { center: { lat: 40.6331, lng: -89.3985 }, zoom: 9 };
 
     // Check if mobile
     const isMobile = window.innerWidth <= 768;
@@ -103,13 +103,20 @@ function createMarkers() {
     markers = [];
 
     filteredData.forEach(facility => {
-        const lat = parseFloat(facility['site latitude']);
-        const lng = parseFloat(facility['site longitude']);
-        const riskLevel = facility['risk_level'] || 'Unknown';
+        const lat = parseFloat(facility['site_latitude']);
+        const lng = parseFloat(facility['site_longitude']);
+        const riskValue = getRiskValue(facility); // Get risk based on selected metric
         const totalEmissions = parseFloat(facility['total_emissions']) || 0;
 
-        // Determine marker colors based on risk level
-        const colors = getRiskColors(riskLevel);
+        // Skip if coordinates are invalid
+        if (isNaN(lat) || isNaN(lng)) {
+            console.warn('Invalid coordinates for facility:', facility);
+            return;
+        }
+
+        // Determine marker colors based on continuous risk score
+        const fillColor = getRiskColor(riskValue);
+        const colors = { fill: fillColor, stroke: darkenColor(fillColor, 0.3) };
 
         // Marker size based on total emissions (log scale)
         // Scale: 10-1000 tons = radius 5-15, 1000-100000 tons = radius 15-30
@@ -129,7 +136,7 @@ function createMarkers() {
         const marker = new google.maps.Marker({
             position: { lat, lng },
             icon: icon,
-            title: facility['site name'] || facility['company name'] || 'Unknown Facility',
+            title: facility['site_name'] || facility['company_name'] || 'Unknown Facility',
             facilityData: facility // Store data with marker
         });
 
@@ -195,24 +202,41 @@ function createMarkers() {
 }
 
 /**
- * Get colors for risk level (fill and stroke) - Google Maps specific
- * Returns both fill and stroke colors for marker styling
+ * Update marker colors based on current risk metric selection
+ * Called when user toggles between absolute and equity-weighted risk
  */
-function getRiskColors(riskLevel) {
-    const fillColor = getRiskColor(riskLevel); // From app_common.js
+function updateMarkerColors() {
+    console.log(`Updating marker colors to ${currentRiskMetric} risk metric`);
+    // Simply re-render all markers with new colors
+    createMarkers();
+}
 
-    // Generate darker stroke color from fill
-    const strokeColors = {
-        '#ef4444': '#991b1b',   // Red -> Darker red
-        '#f59e0b': '#d97706',   // Amber -> Darker amber/orange
-        '#10b981': '#15803d',   // Green -> Darker green
-        '#808080': '#404040'    // Gray -> Darker gray
-    };
+/**
+ * Darken a color by a given factor
+ * @param {string} color - RGB color string like "rgb(16, 185, 129)"
+ * @param {number} factor - Amount to darken (0-1), where 0.3 = 30% darker
+ */
+function darkenColor(color, factor = 0.3) {
+    // Handle hex colors
+    if (color.startsWith('#')) {
+        const rgb = hexToRgb(color);
+        const r = Math.round(rgb.r * (1 - factor));
+        const g = Math.round(rgb.g * (1 - factor));
+        const b = Math.round(rgb.b * (1 - factor));
+        return `rgb(${r}, ${g}, ${b})`;
+    }
 
-    return {
-        fill: fillColor,
-        stroke: strokeColors[fillColor] || '#404040'
-    };
+    // Handle rgb colors
+    const match = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+    if (match) {
+        const r = Math.round(parseInt(match[1]) * (1 - factor));
+        const g = Math.round(parseInt(match[2]) * (1 - factor));
+        const b = Math.round(parseInt(match[3]) * (1 - factor));
+        return `rgb(${r}, ${g}, ${b})`;
+    }
+
+    // Fallback
+    return '#404040';
 }
 
 /**
@@ -222,40 +246,93 @@ function showFacilityDetails(facility) {
     const modal = document.getElementById('facility-modal');
     const content = document.getElementById('facility-details-content');
 
+    // Parse data
+    const siteName = facility['site_name'] || 'Unknown Facility';
+    const facilityId = facility['facility_id'] || 'N/A';
     const totalEmissions = parseFloat(facility['total_emissions']).toFixed(2);
-    const naicsCode = facility['primary naics code'] || 'N/A';
-    const naicsDesc = facility['primary naics description'] || '';
+
+    // NAICS - convert to integer and get description
+    const naicsCode = facility['naics_code'] ? parseInt(parseFloat(facility['naics_code'])) : 'N/A';
+    const naicsDesc = facility['primary_naics_description'] || '';
+    const naicsDisplay = naicsDesc ? `${naicsCode} - ${naicsDesc}` : naicsCode;
+
+    // Risk metrics - use norm columns for display (same as dot colors)
+    const riskNorm = parseFloat(facility['risk_norm']);
+    const riskNormFormatted = !isNaN(riskNorm) ? riskNorm.toFixed(2) : 'N/A';
+    const riskNormColor = !isNaN(riskNorm) ? getRiskColor(riskNorm) : '#808080';
+
+    const equityWeightedRisk = parseFloat(facility['equity_weighted_risk_norm']);
+    const equityWeightedRiskFormatted = !isNaN(equityWeightedRisk) ? equityWeightedRisk.toFixed(2) : 'N/A';
+    const equityWeightedRiskColor = !isNaN(equityWeightedRisk) ? getRiskColor(equityWeightedRisk) : '#808080';
+
+    // Build address
+    const street = facility['street'] || '';
+    const city = facility['city'] || '';
+    const zipCode = facility['zip code'] || '';
+    const address = [street, city, 'IL', zipCode].filter(x => x).join(', ') || 'N/A';
 
     const html = `
-        <div style="max-width: 500px;">
-            <h4 style="margin-bottom: 16px; color: var(--text-primary); font-size: 16px;">Site Information</h4>
-
+        <div style="width: fit-content; min-width: 300px; max-width: 100%;">
+            <!-- Site Name -->
             <div style="margin-bottom: 12px;">
-                <strong>Site Name:</strong> ${facility['site name'] || 'N/A'}
+                <div style="font-size: 16px; font-weight: 600; color: var(--text-primary);">
+                    ${siteName}
+                </div>
             </div>
 
-            <div style="margin-bottom: 12px;">
-                <strong>Facility ID:</strong> ${facility['eis facility id'] || 'N/A'}
+            <!-- Site ID -->
+            <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 8px;">
+                Site ID: <span style="font-family: 'IBM Plex Mono', monospace;">${facilityId}</span>
             </div>
 
-            <div style="margin-bottom: 12px;">
-                <strong>Address:</strong> <span style="color: var(--text-secondary);">(not available)</span>
+            <!-- Address -->
+            <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 8px; line-height: 1.4;">
+                Address: ${address}
             </div>
 
-            <div style="margin-bottom: 12px;">
-                <strong>State:</strong> <span style="color: var(--text-secondary);">(not available)</span>
+            <!-- Industry -->
+            <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 8px;">
+                Industry: ${naicsDesc}
             </div>
 
-            <div style="margin-bottom: 12px;">
-                <strong>Zip:</strong> <span style="color: var(--text-secondary);">(not available)</span>
+            <!-- NAICS Code -->
+            <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 16px;">
+                NAICS: ${naicsCode}
             </div>
 
-            <div style="margin-bottom: 12px;">
-                <strong>Total Emissions:</strong> ${totalEmissions} tons/year
+            <!-- Divider -->
+            <div style="border-top: 1px solid var(--border); margin-bottom: 16px;"></div>
+
+            <!-- Reported Emissions (no color) -->
+            <div style="margin-bottom: 12px; padding: 10px; background: rgba(128, 128, 128, 0.05); border-radius: 6px;">
+                <div style="font-size: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Reported Emissions</div>
+                <div style="font-size: 16px; font-weight: 600; color: var(--text-primary); font-family: 'IBM Plex Mono', monospace;">
+                    ${totalEmissions} <span style="font-size: 11px; font-weight: 400; color: var(--text-secondary); font-family: system-ui, -apple-system, sans-serif;">tons/year</span>
+                </div>
             </div>
 
-            <div style="margin-bottom: 12px;">
-                <strong>NAICS:</strong> ${naicsCode} - ${naicsDesc}
+            <!-- Risk Section Header -->
+            <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 10px; font-weight: 500;">
+                Predicted emissions under-reporting risk
+            </div>
+
+            <!-- Risk Metrics Side by Side -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <!-- Absolute -->
+                <div style="padding: 10px; background: rgba(128, 128, 128, 0.05); border-radius: 6px; border-left: 3px solid ${riskNormColor};">
+                    <div style="font-size: 9px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; font-weight: 600;">Absolute</div>
+                    <div style="font-size: 16px; font-weight: 600; color: ${riskNormColor}; font-family: 'IBM Plex Mono', monospace;">
+                        ${riskNormFormatted}
+                    </div>
+                </div>
+
+                <!-- Equity-Weighted Risk -->
+                <div style="padding: 10px; background: rgba(128, 128, 128, 0.05); border-radius: 6px; border-left: 3px solid ${equityWeightedRiskColor};">
+                    <div style="font-size: 9px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; font-weight: 600;">Equity-Weighted</div>
+                    <div style="font-size: 16px; font-weight: 600; color: ${equityWeightedRiskColor}; font-family: 'IBM Plex Mono', monospace;">
+                        ${equityWeightedRiskFormatted}
+                    </div>
+                </div>
             </div>
         </div>
     `;
@@ -433,26 +510,18 @@ function toggleCensusBlockGroupLayer(show) {
 }
 
 /**
- * Load social data (wrapper function)
+ * Load social data (ADI)
  */
 async function loadSocialData() {
     const year = document.getElementById('social-year-selector').value;
-    const indicator = document.getElementById('social-indicator-selector').value;
+    const rankType = document.getElementById('adi-rank-type-selector').value;
 
     if (!year) {
         showToast('Please select a year', 'error');
         return;
     }
 
-    if (!indicator) {
-        showToast('Please select an indicator', 'error');
-        return;
-    }
-
-    if (indicator === 'adi') {
-        const rankType = document.getElementById('adi-rank-type-selector').value;
-        await loadAdiLayer(year, rankType);
-    }
+    await loadAdiLayer(year, rankType);
 }
 
 /**
@@ -627,8 +696,9 @@ async function loadAdiLayer(year, rankType = 'national') {
 
             // Facility Data
             if (facilityStats.totalFacilities > 0) {
+                const avgRiskFormatted = facilityStats.avgRiskScore.toFixed(2);
                 const riskFraction = `${facilityStats.highRisk}/${facilityStats.totalFacilities}`;
-                const riskColor = facilityStats.highRisk > 0 ? '#ef4444' : '#10b981';
+                const riskColor = facilityStats.avgRiskScore > 0.6 ? '#ef4444' : facilityStats.avgRiskScore > 0.4 ? '#fbbf24' : '#10b981';
 
                 popupHTML += `
                     <div style="margin-bottom: 8px;">
@@ -639,9 +709,13 @@ async function loadAdiLayer(year, rankType = 'national') {
                             <span style="color: ${secondaryColor};">Total:</span>
                             <strong style="color: ${textColor};">${formatEmissions(facilityStats.totalEmissions)}</strong>
                         </div>
+                        <div style="font-size: 12px; margin-bottom: 4px;">
+                            <span style="color: ${secondaryColor};">Avg Risk Score:</span>
+                            <strong style="color: ${riskColor};">${avgRiskFormatted}</strong>
+                        </div>
                         <div style="font-size: 12px;">
-                            <span style="color: ${secondaryColor};">High Risk Sites:</span>
-                            <strong style="color: ${riskColor};">${riskFraction}</strong>
+                            <span style="color: ${secondaryColor};">High Risk Sites (>0.6):</span>
+                            <strong style="color: ${textColor};">${riskFraction}</strong>
                         </div>
                     </div>
                 `;
@@ -820,6 +894,11 @@ function setupEventListeners() {
             button.textContent = 'Hide Census Data';
         }
     });
+
+    // Register callback for risk metric toggle
+    window.onRiskMetricChange = function() {
+        updateMarkerColors();
+    };
 }
 
 /**

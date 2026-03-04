@@ -149,6 +149,11 @@ map.on('load', () => {
     setTheme(isDarkTheme); // From app_common.js
     initializeEmissionLayers();
     loadFacilityData(); // From app_common.js - loads 2021 predictions data
+
+    // Register callback for risk metric toggle
+    window.onRiskMetricChange = function() {
+        updateMarkerColors();
+    };
 });
 
 // Update clusters on zoom/move
@@ -227,15 +232,15 @@ function plotEmissions() {
     // Convert data to GeoJSON features
     const features = [];
     filteredData.forEach(site => {
-        const lat = parseFloat(site['site latitude'] || site['site_latitude']);
-        const lng = parseFloat(site['site longitude'] || site['site_longitude']);
-        const emissions = parseFloat(site['total emissions'] || site['total_emissions']);
-        const riskLevel = site['Risk Level'] || site['risk_level'] || 'Unknown';
+        const lat = parseFloat(site['site_latitude']);
+        const lng = parseFloat(site['site_longitude']);
+        const emissions = parseFloat(site['total_emissions']);
+        const riskValue = getRiskValue(site); // Get risk based on selected metric
 
         if (isNaN(lat) || isNaN(lng) || isNaN(emissions)) return;
 
         // Use color functions from app_common.js
-        const color = getRiskColor(riskLevel);
+        const color = getRiskColor(riskValue);
         const radius = getCircleRadius(emissions);
 
         features.push({
@@ -249,7 +254,7 @@ function plotEmissions() {
                 color: color,
                 baseRadius: radius,
                 emissions: emissions,
-                riskLevel: riskLevel
+                riskScore: riskValue
             }
         });
     });
@@ -269,6 +274,15 @@ function plotEmissions() {
         updateClusters();
     }
     document.getElementById('facility-count').textContent = features.length.toLocaleString();
+}
+
+/**
+ * Update marker colors based on current risk metric selection
+ * For MapLibre, we regenerate the GeoJSON with new colors
+ */
+function updateMarkerColors() {
+    renderData();
+    console.log(`Updated marker colors to ${currentRiskMetric} risk metric`);
 }
 
 function updateClusters() {
@@ -394,8 +408,9 @@ function showSiteDetails(site) {
     const state = site['state'] || 'N/A';
     const county = site['county'] || 'N/A';
     const city = site['city'] || 'N/A';
-    const address = site['Street Address'] || 'N/A';
-    const zipcode = site['site zipcode'] || site['site_zipcode'] || 'N/A';
+    const street = site['street'] || '';
+    const zipcode = site['zip code'] || '';
+    const address = [street, city, 'IL', zipcode].filter(x => x).join(', ') || 'N/A';
     const naicsCode = site['primary naics code'] || site['primary_naics_code'] || 'N/A';
     const naicsDesc = site['primary naics description'] || site['primary_naics_description'] || 'N/A';
     const lat = site['site latitude'] || site['site_latitude'] || 'N/A';
@@ -692,8 +707,9 @@ map.on('click', 'adi-fill', (e) => {
 
     // Facility Data
     if (facilityStats.totalFacilities > 0) {
+        const avgRiskFormatted = facilityStats.avgRiskScore.toFixed(2);
         const riskFraction = `${facilityStats.highRisk}/${facilityStats.totalFacilities}`;
-        const riskColor = facilityStats.highRisk > 0 ? '#ef4444' : '#10b981';
+        const riskColor = facilityStats.avgRiskScore > 0.6 ? '#ef4444' : facilityStats.avgRiskScore > 0.4 ? '#fbbf24' : '#10b981';
 
         popupHTML += `
             <div style="margin-bottom: 8px;">
@@ -704,9 +720,13 @@ map.on('click', 'adi-fill', (e) => {
                     <span style="color: ${secondaryColor};">Total:</span>
                     <strong style="color: ${textColor};">${formatEmissions(facilityStats.totalEmissions)}</strong>
                 </div>
+                <div style="font-size: 12px; margin-bottom: 4px;">
+                    <span style="color: ${secondaryColor};">Avg Risk Score:</span>
+                    <strong style="color: ${riskColor};">${avgRiskFormatted}</strong>
+                </div>
                 <div style="font-size: 12px;">
-                    <span style="color: ${secondaryColor};">High Risk Sites:</span>
-                    <strong style="color: ${riskColor};">${riskFraction}</strong>
+                    <span style="color: ${secondaryColor};">High Risk Sites (>0.6):</span>
+                    <strong style="color: ${textColor};">${riskFraction}</strong>
                 </div>
             </div>
         `;
