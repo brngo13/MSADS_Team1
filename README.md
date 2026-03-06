@@ -22,7 +22,15 @@ Industrial facilities in the United States self‑report their emissions.  Whil
 - **Independent Verification:** Use a multimodal model to predict ground‑level NO₂ from satellite imagery, ground sensors and facility characteristics, providing an independent benchmark for reported emissions.
 - **Anomaly Detection:** Identify facilities with potential under‑reporting using residual anomalies (difference between predicted and reported emissions), peer comparisons and atmospheric anomalies.
 - **Environmental Justice:** Combine facility risk scores with census tract deprivation data (Area Deprivation Index) to see whether disadvantaged communities face higher under‑reporting risk.
-- **Interactive Insights:** Deliver a dashboard and notebooks that regulators and community members can use to explore facility risks, compare industries and examine equity patterns.
+ - **Interactive Insights:** Deliver a dashboard and notebooks that regulators and community members can use to explore facility risks, compare industries and examine equity patterns.
+
+## Conceptual overview
+
+To capture the mission of this project at a glance, the diagram below illustrates how our three pillars—independent emissions verification, multi‑modal data fusion and environmental justice—overlap and reinforce one another.  The intersection of these circles is where we uncover hidden pollution and illuminate who bears the burden.
+
+<img src="conceptual_overview.png" alt="Conceptual overview: industrial emissions, data fusion and environmental justice" width="600">
+
+*Independent verification, multimodal data fusion and environmental justice are the three pillars of our project.*
 
 ## Data Sources
 
@@ -41,17 +49,17 @@ Sentinel‑5P is the first Copernicus mission dedicated to monitoring our atmosp
 
 Below are sample visualizations from our key datasets.  These images help contextualize how the model sees the world—from atmospheric NO₂ columns to high‑resolution land‑cover and global pollution patterns.
 
-![Sentinel‑5P sample NO₂ column](sentinel5p_sample.png)
+<img src="sentinel5p_sample_crop.png" alt="Sentinel‑5P sample NO₂ column" width="600">
 
-*Example: Tropospheric NO₂ columns (moles/m²) from the Sentinel‑5P TROPOMI Level‑3 near real‑time product.*
+*Example: Tropospheric NO₂ columns (moles/m²) from the Sentinel‑5P TROPOMI Level‑3 near real‑time product.  The image has been cropped and resized for consistent presentation.*
 
-![Sentinel‑2 sample imagery](sentinel2_sample.png)
+<img src="sentinel2_sample_crop.png" alt="Sentinel‑2 sample imagery" width="600">
 
-*Example: Sentinel‑2 multispectral image showing land‑surface features near the Rio Bonito tornado scar (bands B08/B04/B02).* 
+*Example: Sentinel‑2 multispectral image showing land‑surface features near the Rio Bonito tornado scar.  The image is cropped and resized to match our layout.*
 
-![Global NO₂ from space](emissions_image.jpg)
+<img src="emissions_image_crop.jpg" alt="Global NO₂ from space" width="600">
 
-*Global map of tropospheric NO₂ concentrations, averaged for 2014, as observed by NASA’s Aura OMI instrument (public domain data).* 
+*Global map of tropospheric NO₂ concentrations, averaged for 2014, cropped and resized for consistency.*
 
 ## Methodology
 
@@ -65,16 +73,60 @@ Our analysis follows a five‑stage pipeline:
 
 An overview of the data pipeline is shown below:
 
-![Data pipeline overview](pipeline.png)
+<img src="pipeline.png" alt="Data pipeline overview" width="600">
+## Dashboard & Notebook Highlights
 
-## Key Results
+Our tools aren’t just data dumps. They’re interactive experiences designed for exploration:
 
-- **Top Risk Facilities:** Facilities with the highest absolute risk scores include AT&T Illinois, North Shore Water Reclamation District, Airgas USA LLC, AkzoNobel Aerospace Coatings and the Rehabilitation Institute of Chicago.  Many rely on distributed generators or estimation‑based reporting.
-- **Under‑Reporting Patterns:** Under‑reporting risk peaks among mid‑scale emitters; the largest emitters generally show lower risk, indicating that risk is not solely tied to volume.
-- **Environmental Justice:** High‑risk facilities are disproportionately located in areas with high ADI scores, suggesting disadvantaged communities may be more exposed to under‑reporting.
-- **Actionable Insights:** Satellite models cannot confirm non‑compliance, but they highlight facilities where reported emissions diverge from expectations.  Regulators can prioritize inspections and deploy additional monitors based on our risk rankings.
+- **Interactive Map:** View facility risk scores on a map of the U.S., zoom in on communities, and filter by industry, fuel type or risk percentile.
+- **Anomaly Components:** Drill down into the residual, peer and atmospheric anomaly components to see which mechanism drives a facility’s risk.
+- **Equity Overlay:** Toggle the Area Deprivation Index overlay to visualise socioeconomic vulnerability alongside facility risk.
+- **Comparative Charts:** Compare risk distributions across industries, states or emission quartiles with dynamic bar and box plots.
+- **Notebook Workflows:** Reproduce our entire analysis from data ingestion to model training and risk scoring in our Jupyter notebooks.
 
-![Top risk facilities](top_risk.png)
+## Model & Technical Details
+
+Our late‑fusion model integrates multiple data streams and feature types:
+
+- **Sentinel‑2 Features:** We extract convolutional features from the multispectral Sentinel‑2 images (bands B04, B03, B02 and B08) around each facility at 10 m resolution.
+- **Sentinel‑5P Columns:** Daily tropospheric NO₂ columns are aggregated into temporal features that capture atmospheric patterns and seasonal cycles.
+- **Facility Attributes:** Facility‑level metadata such as NAICS codes, permit types and reported emissions are embedded as one‑hot or continuous features.
+- **Late Fusion Architecture:** Separate branches process imagery, column data and attributes before concatenation and final prediction.  The model is trained with mean‑squared‑error loss to predict ground‑level NO₂, achieving an R² of about 0.60 on held‑out sensors.
+- **Training Details:** We use hundreds of sensors and thousands of satellite snapshots for training, applying 5‑fold cross‑validation and early stopping to prevent overfitting.  The model is implemented in PyTorch and available in our notebooks.
+
+## Results & Impact
+
+Our approach highlights facilities where reported emissions diverge from satellite‑based expectations and underscores broader patterns:
+
+- **Mid‑scale Emitters:** Under‑reporting risk peaks among mid‑scale emitters; smaller and larger facilities generally have lower risk.
+- **Facility Rankings:** Top‑risk facilities include major telecommunication, utility and chemical plants; many rely on distributed generators or estimation‑based reporting.
+- **Environmental Justice:** High‑risk facilities are concentrated in socially disadvantaged tracts, indicating that communities with high ADI scores are exposed to greater under‑reporting risks.
+- **Regulatory Action:** While satellite models cannot confirm non‑compliance, they help regulators prioritise inspections and allocate monitoring resources more efficiently.
+- **Broader Applicability:** The methods can be extended to other pollutants and jurisdictions, providing a scalable framework for independent emissions verification.
+
+<img src="top_risk.png" alt="Top risk facilities" width="600">
+
+## Environmental justice focus
+
+Our project is grounded in the principles of environmental justice: the idea that everyone deserves clean air regardless of income, race or neighbourhood.  The illustration below conveys this vision: industrial facilities (icons) sit on a stylised map of neighbourhoods shaded by socio‑economic status, with coloured circles indicating under‑reporting risk.  High‑risk emitters in disadvantaged areas are highlighted in red, reminding us that pollution is not distributed evenly.
+
+<img src="env_justice_dark.png" alt="Environmental justice illustration" width="600">
+
+*A stylised illustration of environmental justice: coloured circles indicate facility risk levels overlaying socio‑economic neighbourhoods.*
+
+## Future Work
+
+We see many opportunities for improvement and extension:
+
+- **Additional Pollutants:** Apply our fusion framework to sulfur dioxide, particulate matter and methane to broaden coverage.
+- **Higher Resolution:** Incorporate 3 m PlanetScope imagery or geostationary satellites to capture finer spatial and temporal patterns.
+- **More Sensors:** Deploy more ground monitors or integrate low‑cost sensor networks beyond Chicago to validate and refine models nationally.
+- **Equity Indices:** Combine the ADI with other socioeconomic indices (e.g., Social Vulnerability Index, Environmental Justice Index) to capture multiple dimensions of vulnerability.
+- **User Experience:** Enhance the dashboard with time series visualisations, facility search, bookmarking and export functions.
+
+## Contributing
+
+We welcome contributions!  If you find an issue or have an idea for an improvement, please open an [issue](https://github.com/brngo13/MSADS_Team1/issues) or submit a pull request.  See our notebooks and scripts for context, and feel free to reach out to the team via GitHub for questions.
 
 ## Getting Started
 
