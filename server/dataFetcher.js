@@ -19,7 +19,7 @@ const path = require('path');
 // Load configuration from config.json
 const configPath = path.join(__dirname, '../config.json');
 let config = {
-    gcsStorageBucket: 'msads-team1-data',
+    gcsStorageBucket: 'msads-mba-capstone-team-1',
     gcsCredentialsPath: './gcs_credentials.json'
 };
 
@@ -52,14 +52,16 @@ const credentialsPath = path.resolve(__dirname, '..', config.gcsCredentialsPath)
 let storage;
 try {
     if (fs.existsSync(credentialsPath)) {
+        // Use credentials file (local development)
         storage = new Storage({
             keyFilename: credentialsPath
         });
         console.log(`✓ GCS Storage client initialized with credentials: ${credentialsPath}`);
     } else {
-        console.warn(`⚠️  GCS credentials not found at: ${credentialsPath}`);
-        console.warn('   Files will only be served from local cache.');
-        storage = null;
+        // Use Application Default Credentials (Cloud Run, GCE, etc.)
+        console.log('⚠️  No credentials file found, using Application Default Credentials');
+        storage = new Storage();
+        console.log(`✓ GCS Storage client initialized with ADC for bucket: ${config.gcsStorageBucket}`);
     }
 } catch (error) {
     console.error('Failed to initialize GCS Storage client:', error.message);
@@ -192,12 +194,12 @@ async function getAdiData(year) {
         throw new Error('GCS Storage client not initialized. Check credentials path in config.json');
     }
 
-    console.log(`⬇ Searching for ADI file in GCS: Data/adi_data/USA_${year}_ADI_Census_Block*.csv`);
+    console.log(`⬇ Searching for ADI file in GCS: Data/adi_data/US_${year}_ADI_Census_Block*.csv`);
 
     try {
         // List files in adi_data directory matching pattern
         const [files] = await bucket.getFiles({
-            prefix: `${GCS_PATHS.adi}/USA_${year}_ADI_Census_Block`
+            prefix: `${GCS_PATHS.adi}/US_${year}_ADI_Census_Block`
         });
 
         if (files.length === 0) {

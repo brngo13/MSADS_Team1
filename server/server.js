@@ -7,7 +7,7 @@ const { createReadStream } = require('fs');
 const dataFetcher = require('./dataFetcher');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(express.json());
@@ -283,35 +283,51 @@ app.get('/api/adi/years', (req, res) => {
 app.get('/api/config', (req, res) => {
     const configPath = path.join(__dirname, '../config.json');
 
-    if (!fs.existsSync(configPath)) {
-        return res.status(404).json({
-            error: 'Configuration file not found',
-            message: 'Please create config.json from config.json.example'
+    // App configuration (hardcoded - not secrets)
+    const appConfig = {
+        mapDefaults: {
+            center: { lat: 39.7, lng: -89.3985 },
+            zoom: 7
+        },
+        dataSource: {
+            type: 'api',
+            apiEndpoint: '/api/predictions/2021',
+            year: 2021
+        }
+    };
+
+    // Try to get API key from config.json first (local dev)
+    let googleMapsApiKey = null;
+    if (fs.existsSync(configPath)) {
+        try {
+            const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+            googleMapsApiKey = config.googleMapsApiKey;
+            console.log('✓ Using config.json for API key');
+        } catch (error) {
+            console.error('Error reading config.json:', error);
+        }
+    }
+
+    // Fall back to environment variable (Cloud Run)
+    if (!googleMapsApiKey && process.env.GOOGLE_MAPS_API_KEY) {
+        googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY;
+        console.log('✓ Using environment variable for API key');
+    }
+
+    // If still no API key, return error
+    if (!googleMapsApiKey) {
+        return res.status(500).json({
+            error: 'Configuration not found',
+            message: 'Please set GOOGLE_MAPS_API_KEY environment variable or create config.json'
         });
     }
 
-    try {
-        const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-
-        // Only send public configuration to client
-        res.json({
-            googleMapsApiKey: config.googleMapsApiKey,
-            mapDefaults: config.mapDefaults || {
-                center: { lat: 39.8283, lng: -98.5795 },
-                zoom: 5
-            },
-            dataSource: config.dataSource || {
-                type: 'csv',
-                path: '../data/predictions/Data_Predictions_annual_risk_with_socioeconomic_2021.csv'
-            }
-        });
-    } catch (error) {
-        console.error('Error reading config.json:', error);
-        res.status(500).json({
-            error: 'Failed to read configuration',
-            message: error.message
-        });
-    }
+    // Send configuration to client
+    res.json({
+        googleMapsApiKey: googleMapsApiKey,
+        mapDefaults: appConfig.mapDefaults,
+        dataSource: appConfig.dataSource
+    });
 });
 
 // ============================================================================

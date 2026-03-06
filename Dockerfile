@@ -12,10 +12,13 @@ RUN npm ci --only=production
 
 # Copy application code
 COPY server/ ./server/
-COPY data/ ./data/
+COPY public/ ./public/
+COPY config.json ./
 
-# Expose port (Cloud Run will set PORT env variable)
-ENV PORT=8080
+# Create data directories (files will be fetched from GCS at runtime)
+RUN mkdir -p data/nei data/adi data/boundaries data_cache
+
+# Expose port (Cloud Run will set PORT env variable automatically)
 EXPOSE 8080
 
 # Start server

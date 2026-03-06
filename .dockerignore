@@ -1,12 +1,36 @@
-node_modules
+# Dependencies (will be installed in container)
+node_modules/
 npm-debug.log
-.git
+
+# Git
+.git/
 .gitignore
-README.md
+
+# Development files
 .env
-.env.*
+*.log
+
+# Documentation and notebooks
+README.md
+notebooks/
+scripts/
+
+# Data files (fetched from GCS at runtime)
+data/
+data_cache/
+
+# Firebase config (not needed in Cloud Run)
 firebase.json
 .firebaserc
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
 .DS_Store
-public/
-scripts/
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.swp
