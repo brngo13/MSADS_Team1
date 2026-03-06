@@ -26,11 +26,7 @@ Industrial facilities in the United States self‑report their emissions.  Whil
 
 ## Conceptual overview
 
-To capture the mission of this project at a glance, the diagram below illustrates how our three pillars—independent emissions verification, multi‑modal data fusion and environmental justice—overlap and reinforce one another.  The intersection of these circles is where we uncover hidden pollution and illuminate who bears the burden.
-
-<img src="conceptual_overview.png" alt="Conceptual overview: industrial emissions, data fusion and environmental justice" width="600">
-
-*Independent verification, multimodal data fusion and environmental justice are the three pillars of our project.*
+Our project sits at the intersection of three pillars: independent emissions verification, multi‑modal data fusion and environmental justice.  Independent verification provides a neutral benchmark for facility emissions, data fusion combines satellite imagery with ground measurements and facility metadata, and environmental justice focuses our analysis on who bears the burden.  By bringing these pillars together, we uncover hidden pollution and identify communities most at risk.
 
 ## Data Sources
 
@@ -61,6 +57,8 @@ Below are sample visualizations from our key datasets.  These images help contex
 
 *Global map of tropospheric NO₂ concentrations, averaged for 2014, cropped and resized for consistency.*
 
+---
+
 ## Methodology
 
 Our analysis follows a five‑stage pipeline:
@@ -74,6 +72,8 @@ Our analysis follows a five‑stage pipeline:
 An overview of the data pipeline is shown below:
 
 <img src="pipeline.png" alt="Data pipeline overview" width="600">
+
+---
 ## Dashboard & Notebook Highlights
 
 Our tools aren’t just data dumps. They’re interactive experiences designed for exploration:
@@ -110,9 +110,12 @@ Our approach highlights facilities where reported emissions diverge from satelli
 
 Our project is grounded in the principles of environmental justice: the idea that everyone deserves clean air regardless of income, race or neighbourhood.  The illustration below conveys this vision: industrial facilities (icons) sit on a stylised map of neighbourhoods shaded by socio‑economic status, with coloured circles indicating under‑reporting risk.  High‑risk emitters in disadvantaged areas are highlighted in red, reminding us that pollution is not distributed evenly.
 
+
 <img src="env_justice_dark.png" alt="Environmental justice illustration" width="600">
 
 *A stylised illustration of environmental justice: coloured circles indicate facility risk levels overlaying socio‑economic neighbourhoods.*
+
+---
 
 ## Future Work
 
