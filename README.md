@@ -78,10 +78,9 @@ An overview of the data pipeline is shown below:
 
 Our tools aren’t just data dumps. They’re interactive experiences designed for exploration:
 
-- **Interactive Map:** View facility risk scores on a map of the U.S., zoom in on communities, and filter by industry, fuel type or risk percentile.
+- **Interactive Map:** View facility risk scores on a map of the U.S., zoom in on communities, and filter by industry and risk percentile.
 - **Anomaly Components:** Drill down into the residual, peer and atmospheric anomaly components to see which mechanism drives a facility’s risk.
 - **Equity Overlay:** Toggle the Area Deprivation Index overlay to visualise socioeconomic vulnerability alongside facility risk.
-- **Comparative Charts:** Compare risk distributions across industries, states or emission quartiles with dynamic bar and box plots.
 - **Notebook Workflows:** Reproduce our entire analysis from data ingestion to model training and risk scoring in our Jupyter notebooks.
 
 ## Model & Technical Details
