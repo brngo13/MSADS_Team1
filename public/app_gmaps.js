@@ -586,11 +586,6 @@ async function preloadAdiData(year) {
 
         console.log(`✅ Preloaded ${Object.keys(parsedAdi).length.toLocaleString()} ADI records + GeoJSON for ${year}`);
 
-        // Update UI indicator if available
-        if (typeof updateAdiPreloadIndicator === 'function') {
-            updateAdiPreloadIndicator();
-        }
-
     } catch (error) {
         console.error(`❌ Failed to preload ADI data for ${year}:`, error);
         adiPreloadStatus[year] = 'error';
@@ -1013,31 +1008,12 @@ function setupEventListeners() {
     const yearSelector = document.getElementById('adi-year-selector');
     if (yearSelector) {
         yearSelector.addEventListener('change', (e) => {
-            updateAdiPreloadIndicator();
             // Start preloading the new year if not already cached
             const year = e.target.value;
             if (!adiPreloadStatus[year]) {
                 preloadAdiData(year);
             }
         });
-    }
-}
-
-/**
- * Update the "✓ Ready" indicator next to year selector
- */
-function updateAdiPreloadIndicator() {
-    const yearSelector = document.getElementById('adi-year-selector');
-    const indicator = document.getElementById('adi-preload-indicator');
-
-    if (!yearSelector || !indicator) return;
-
-    const selectedYear = yearSelector.value;
-
-    if (adiPreloadStatus[selectedYear] === 'loaded') {
-        indicator.style.display = 'inline';
-    } else {
-        indicator.style.display = 'none';
     }
 }
 

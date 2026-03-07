@@ -822,28 +822,9 @@ async function preloadAdiData(year) {
         adiPreloadStatus[year] = 'loaded';
         console.log(`✅ Preloaded ${Object.keys(parsedData).length.toLocaleString()} ADI records for ${year}`);
 
-        // Update UI indicator if this is the currently selected year
-        updateAdiPreloadIndicator();
-
     } catch (error) {
         console.error(`❌ Failed to preload ADI data for ${year}:`, error);
         adiPreloadStatus[year] = 'error';
-    }
-}
-
-// Update the "Ready" indicator next to year selector
-function updateAdiPreloadIndicator() {
-    const yearSelector = document.getElementById('adi-year-selector');
-    const indicator = document.getElementById('adi-preload-indicator');
-
-    if (!yearSelector || !indicator) return;
-
-    const selectedYear = yearSelector.value;
-
-    if (adiPreloadStatus[selectedYear] === 'loaded') {
-        indicator.style.display = 'inline';
-    } else {
-        indicator.style.display = 'none';
     }
 }
 
@@ -1249,9 +1230,8 @@ document.getElementById('adi-score-type').addEventListener('change', () => {
     }
 });
 
-// Update preload indicator when year changes
+// Preload ADI data when year changes
 document.getElementById('adi-year-selector').addEventListener('change', (e) => {
-    updateAdiPreloadIndicator();
     // Start preloading the new year if not already cached
     const year = e.target.value;
     if (!adiPreloadStatus[year]) {
