@@ -47,15 +47,15 @@ Below are sample visualizations from our key datasets.  These images help contex
 
 <img src="sentinel5p_sample_crop.png" alt="Sentinel‑5P sample NO₂ column" width="600">
 
-*Example: Tropospheric NO₂ columns (moles/m²) from the Sentinel‑5P TROPOMI Level‑3 near real‑time product.  The image has been cropped and resized for consistent presentation.*
+*Example: Tropospheric NO₂ columns (moles/m²) from the Sentinel‑5P TROPOMI Level‑3 near real‑time product.*
 
 <img src="sentinel2_sample_crop.png" alt="Sentinel‑2 sample imagery" width="600">
 
-*Example: Sentinel‑2 multispectral image showing land‑surface features near the Rio Bonito tornado scar.  The image is cropped and resized to match our layout.*
+*Example: Sentinel‑2 multispectral image showing land‑surface features near the Rio Bonito tornado scar.*
 
 <img src="emissions_image_crop.jpg" alt="Global NO₂ from space" width="600">
 
-*Global map of tropospheric NO₂ concentrations, averaged for 2014, cropped and resized for consistency.*
+*Global map of tropospheric NO₂ concentrations, averaged for 2014.*
 
 ---
 
