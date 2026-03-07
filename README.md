@@ -36,8 +36,8 @@ Sentinel‑5P is the first Copernicus mission dedicated to monitoring our atmosp
 |-------|-----------|-------|
 | **NEI Facility Data** | Annual NO₂ emissions self‑reported to the U.S. EPA’s National Emissions Inventory (NEI).  This dataset serves as our baseline for comparison. | [EPA NEI](https://www.epa.gov/air-emissions-inventories/national-emissions-inventory-nei) |
 | **Microsoft Project Eclipse Sensors** | Low‑cost ground‑level NO₂ measurements deployed across Chicago; these hyper‑local observations are used as training labels for our multimodal model. | [Project Eclipse Dataset](https://planetarycomputer.microsoft.com/dataset/eclipse) |
-| **Sentinel‑5P TROPOMI** | Daily satellite observations of tropospheric NO₂ columns captured by the TROPOMI instrument on ESA’s Sentinel‑5P mission.  These data provide atmospheric context for our model. | [Sentinel‑5P Data](https://sentinel.esa.int/web/sentinel/missions/sentinel-5p) |
-| **Sentinel‑2 Imagery** | Multispectral images from ESA’s Sentinel‑2 constellation, offering high‑resolution (10–20 m) land‑cover context around each facility. | [Sentinel‑2 Data](https://www.esa.int/Applications/Observing_the_Earth/Copernicus/The_Sentinel_missions) |
+| **Sentinel‑5P TROPOMI** | Daily satellite observations of tropospheric NO₂ columns captured by the TROPOMI instrument on ESA’s Sentinel‑5P mission.  These data provide atmospheric context for our model. | [Sentinel‑5P Data](https://sentinels.copernicus.eu/copernicus/sentinel-5p) |
+| **Sentinel‑2 Imagery** | Multispectral images from ESA’s Sentinel‑2 constellation, offering high‑resolution (10–20 m) land‑cover context around each facility. | [Sentinel‑2 Data](https://sentinels.copernicus.eu/copernicus/sentinel-2) |
 | **Area Deprivation Index (ADI)** | Socioeconomic index ranking neighborhoods by income, education, employment and housing quality, hosted by the University of Wisconsin’s Neighborhood Atlas. | [Neighborhood Atlas](https://www.neighborhoodatlas.medicine.wisc.edu/) |
 | **Auxiliary Data** | Facility attributes (NAICS codes), census demographics and weather variables integrated from various sources. | — |
 
