@@ -219,6 +219,14 @@ map.on('load', () => {
     setTheme(isDarkTheme);
     initializeEmissionLayers();
     initializePMTilesSources();
+
+    // Background preload ADI data (wait 2 seconds for map to settle)
+    setTimeout(() => {
+        // Preload the most common years users might select
+        preloadAdiData('2020'); // Default year
+        setTimeout(() => preloadAdiData('2019'), 1000); // Preload 2019 next
+        setTimeout(() => preloadAdiData('2021'), 2000); // Preload 2021 last
+    }, 2000);
 });
 
 // Update clusters on zoom/move
@@ -245,6 +253,8 @@ let filters = {
 let activeTab = 'emissions';
 let adiLayer = null;
 let adiDataMap = {};
+let preloadedAdiData = {}; // Cache for background-loaded ADI data
+let adiPreloadStatus = {}; // Track which years are preloaded
 let boundariesCache = {};
 let currentAdiYear = '2023';
 let currentAdiScoreType = 'ADI_NATRANK';
@@ -763,6 +773,80 @@ function getAdiColor(adiScore, scoreType = 'ADI_NATRANK') {
 }
 
 // Load Illinois census boundaries
+// Background preload ADI data after map loads
+async function preloadAdiData(year) {
+    // Skip if already preloaded or in progress
+    if (adiPreloadStatus[year]) {
+        return;
+    }
+
+    adiPreloadStatus[year] = 'loading';
+    console.log(`🔄 Background preloading ADI data for ${year}...`);
+
+    try {
+        const adiResponse = await fetch(`/api/adi/${year}`);
+        if (!adiResponse.ok) {
+            console.warn(`⚠️  ADI data for ${year} not available for preload`);
+            adiPreloadStatus[year] = 'error';
+            return;
+        }
+
+        const adiCsvText = await adiResponse.text();
+
+        // Parse CSV into map
+        const parsedData = {};
+        await new Promise((resolve) => {
+            Papa.parse(adiCsvText, {
+                header: true,
+                skipEmptyLines: true,
+                complete: (results) => {
+                    results.data.forEach(row => {
+                        const geoid = row.FIPS || row.geoid10 || row.GEOID;
+                        const natRank = parseInt(row.ADI_NATRANK);
+                        const stateRank = parseInt(row.ADI_STATERNK);
+
+                        if (geoid && !isNaN(natRank)) {
+                            parsedData[geoid] = {
+                                ADI_NATRANK: natRank,
+                                ADI_STATERNK: stateRank
+                            };
+                        }
+                    });
+                    resolve();
+                }
+            });
+        });
+
+        // Cache the parsed data
+        preloadedAdiData[year] = parsedData;
+        adiPreloadStatus[year] = 'loaded';
+        console.log(`✅ Preloaded ${Object.keys(parsedData).length.toLocaleString()} ADI records for ${year}`);
+
+        // Update UI indicator if this is the currently selected year
+        updateAdiPreloadIndicator();
+
+    } catch (error) {
+        console.error(`❌ Failed to preload ADI data for ${year}:`, error);
+        adiPreloadStatus[year] = 'error';
+    }
+}
+
+// Update the "Ready" indicator next to year selector
+function updateAdiPreloadIndicator() {
+    const yearSelector = document.getElementById('adi-year-selector');
+    const indicator = document.getElementById('adi-preload-indicator');
+
+    if (!yearSelector || !indicator) return;
+
+    const selectedYear = yearSelector.value;
+
+    if (adiPreloadStatus[selectedYear] === 'loaded') {
+        indicator.style.display = 'inline';
+    } else {
+        indicator.style.display = 'none';
+    }
+}
+
 // Load and display ADI layer (refactored for PMTiles)
 let adiLoadRetries = 0;
 const MAX_ADI_RETRIES = 10;
@@ -806,40 +890,54 @@ async function loadAdiLayer() {
 
     // Reset retry counter on success
     adiLoadRetries = 0;
-    showToast(`Loading ADI data for ${year}...`, 'success');
 
     try {
-        // Step 1: Fetch and parse ADI CSV
-        const adiResponse = await fetch(`/api/adi/${year}`);
-        if (!adiResponse.ok) throw new Error(`ADI data for ${year} not found`);
-        const adiCsvText = await adiResponse.text();
+        // Step 1: Check if data is preloaded, otherwise fetch and parse ADI CSV
+        if (preloadedAdiData[year]) {
+            // Use cached preloaded data (instant!)
+            adiDataMap = preloadedAdiData[year];
+            console.log(`✅ Using preloaded ADI data for ${year} (${Object.keys(adiDataMap).length.toLocaleString()} records)`);
+            showToast(`Loading ADI data for ${year}...`, 'success');
+        } else {
+            // Data not preloaded, fetch now (show loading message)
+            showToast(`Loading ADI data for ${year}...`, 'success');
+            console.log(`⚠️  ADI data for ${year} not preloaded, fetching now...`);
 
-        // Parse CSV into map
-        adiDataMap = {};
-        await new Promise((resolve) => {
-            Papa.parse(adiCsvText, {
-                header: true,
-                skipEmptyLines: true,
-                complete: (results) => {
-                    results.data.forEach(row => {
-                        // Support "FIPS", "geoid10", or "GEOID" column names
-                        const geoid = row.FIPS || row.geoid10 || row.GEOID;
-                        const natRank = parseInt(row.ADI_NATRANK);
-                        const stateRank = parseInt(row.ADI_STATERNK);
+            const adiResponse = await fetch(`/api/adi/${year}`);
+            if (!adiResponse.ok) throw new Error(`ADI data for ${year} not found`);
+            const adiCsvText = await adiResponse.text();
 
-                        if (geoid && !isNaN(natRank)) {
-                            adiDataMap[geoid] = {
-                                ADI_NATRANK: natRank,
-                                ADI_STATERNK: stateRank
-                            };
-                        }
-                    });
-                    resolve();
-                }
+            // Parse CSV into map
+            adiDataMap = {};
+            await new Promise((resolve) => {
+                Papa.parse(adiCsvText, {
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: (results) => {
+                        results.data.forEach(row => {
+                            // Support "FIPS", "geoid10", or "GEOID" column names
+                            const geoid = row.FIPS || row.geoid10 || row.GEOID;
+                            const natRank = parseInt(row.ADI_NATRANK);
+                            const stateRank = parseInt(row.ADI_STATERNK);
+
+                            if (geoid && !isNaN(natRank)) {
+                                adiDataMap[geoid] = {
+                                    ADI_NATRANK: natRank,
+                                    ADI_STATERNK: stateRank
+                                };
+                            }
+                        });
+                        resolve();
+                    }
+                });
             });
-        });
 
-        console.log(`Loaded ${Object.keys(adiDataMap).length} ADI records`);
+            console.log(`Loaded ${Object.keys(adiDataMap).length} ADI records`);
+
+            // Cache for future use
+            preloadedAdiData[year] = adiDataMap;
+            adiPreloadStatus[year] = 'loaded';
+        }
 
         // Step 2: Apply feature-state to PMTiles features
         Object.entries(adiDataMap).forEach(([geoid, scores]) => {
@@ -1148,6 +1246,16 @@ document.getElementById('adi-score-type').addEventListener('change', () => {
     // Reload layer if already loaded
     if (map.getLayer('adi-fill') && activeTab === 'socioeconomic') {
         loadAdiLayer();
+    }
+});
+
+// Update preload indicator when year changes
+document.getElementById('adi-year-selector').addEventListener('change', (e) => {
+    updateAdiPreloadIndicator();
+    // Start preloading the new year if not already cached
+    const year = e.target.value;
+    if (!adiPreloadStatus[year]) {
+        preloadAdiData(year);
     }
 });
 
