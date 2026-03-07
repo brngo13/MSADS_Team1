@@ -106,17 +106,6 @@ Our approach highlights facilities where reported emissions diverge from satelli
 
 <img src="top_risk.png" alt="Top risk facilities" width="600">
 
-## Environmental justice focus
-
-Our project is grounded in the principles of environmental justice: the idea that everyone deserves clean air regardless of income, race or neighbourhood.  The illustration below conveys this vision: industrial facilities (icons) sit on a stylised map of neighbourhoods shaded by socio‑economic status, with coloured circles indicating under‑reporting risk.  High‑risk emitters in disadvantaged areas are highlighted in red, reminding us that pollution is not distributed evenly.
-
-
-<img src="env_justice_dark.png" alt="Environmental justice illustration" width="600">
-
-*A stylised illustration of environmental justice: coloured circles indicate facility risk levels overlaying socio‑economic neighbourhoods.*
-
----
-
 ## Future Work
 
 We see many opportunities for improvement and extension:
